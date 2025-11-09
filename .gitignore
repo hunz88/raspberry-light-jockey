@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+*.egg-info/
+
+# Logs
+*.log
+
+# Temp files
+*.tmp
+.DS_Store
+
+# Audio samples
+*.wav
+/tmp/
+
+# Config locale (se hai password)
+# config/local.yaml

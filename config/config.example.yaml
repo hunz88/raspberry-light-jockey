@@ -1,0 +1,189 @@
+# Raspberry Pi Light Jockey - Configuration File
+# Copia questo file in config.yaml e modifica i valori
+
+# =============================================================================
+# AI CONFIGURATION
+# =============================================================================
+ai:
+  # Provider: 'gemini' o 'claude'
+  provider: 'gemini'
+  
+  # Gemini API (GRATIS!)
+  # Ottieni la tua chiave su: https://makersuite.google.com/app/apikey
+  gemini:
+    api_key: 'YOUR_GEMINI_API_KEY_HERE'
+    model: 'gemini-pro'
+    
+  # Claude API (opzionale, a pagamento ma più potente)
+  claude:
+    api_key: 'YOUR_CLAUDE_API_KEY_HERE'
+    model: 'claude-sonnet-4-20250514'
+
+# =============================================================================
+# AUDIO CONFIGURATION
+# =============================================================================
+audio:
+  # Device input (lascia vuoto per default)
+  input_device: null
+  
+  # Sample rate (Hz)
+  sample_rate: 44100
+  
+  # Buffer size (samples) - più basso = meno latenza ma più CPU
+  buffer_size: 2048
+  
+  # Channels
+  channels: 1
+  
+  # Beat detection sensitivity (0.0 - 1.0)
+  beat_sensitivity: 0.5
+  
+  # Frequency ranges for color mapping
+  frequency_ranges:
+    bass: [20, 250]      # Hz - Bassi
+    mid: [250, 4000]     # Hz - Medi
+    treble: [4000, 20000] # Hz - Alti
+
+# =============================================================================
+# WIZ LIGHTS CONFIGURATION
+# =============================================================================
+lights:
+  # Auto-discovery delle luci sulla rete
+  auto_discover: true
+  
+  # Oppure specifica manualmente gli IP delle tue luci
+  manual_ips:
+    - '192.168.1.100'
+    - '192.168.1.101'
+    # Aggiungi altri IP se necessario
+  
+  # Broadcast address per discovery
+  broadcast_address: '255.255.255.255'
+  
+  # Timeout per comandi (secondi)
+  timeout: 2
+  
+  # Max retry per comando fallito
+  max_retries: 3
+
+# =============================================================================
+# EFFECT ENGINE CONFIGURATION
+# =============================================================================
+effects:
+  # Transition speed (ms)
+  transition_speed: 500
+  
+  # Update rate (fps) - quante volte al secondo aggiornare le luci
+  # Attenzione: valori troppo alti possono sovraccaricare le Wiz
+  update_rate: 30
+  
+  # Smoothing factor (0.0 - 1.0) - più alto = più smooth
+  smoothing: 0.7
+  
+  # Default brightness (0-255)
+  default_brightness: 200
+
+# =============================================================================
+# SONG RECOGNITION CONFIGURATION
+# =============================================================================
+recognition:
+  # Abilita riconoscimento automatico
+  enabled: true
+  
+  # Secondi di audio da analizzare per il riconoscimento
+  sample_duration: 5
+  
+  # Intervallo tra tentativi di riconoscimento (secondi)
+  recognition_interval: 30
+  
+  # Cache dei risultati
+  cache_enabled: true
+  cache_duration: 3600  # secondi (1 ora)
+
+# =============================================================================
+# AI COLOR SUGGESTION CONFIGURATION
+# =============================================================================
+ai_colors:
+  # Abilita suggerimenti AI
+  enabled: true
+  
+  # Prompt template per AI (avanzato)
+  prompt_template: |
+    Analizza questa canzone e suggerisci una palette di colori per luci RGB.
+    
+    Titolo: {title}
+    Artista: {artist}
+    Genere: {genre}
+    Mood/Energia: {mood}
+    Testo (estratto): {lyrics_snippet}
+    
+    Fornisci:
+    1. Una palette di 3-5 colori in formato RGB (0-255)
+    2. Il tipo di effetto consigliato (wave, strobe, pulse, fade, static)
+    3. La velocità degli effetti (slow, medium, fast)
+    4. Una breve spiegazione della scelta
+    
+    Rispondi SOLO in formato JSON:
+    {
+      "palette": [[R,G,B], [R,G,B], ...],
+      "effect_type": "wave",
+      "effect_speed": "medium",
+      "reasoning": "breve spiegazione"
+    }
+
+# =============================================================================
+# LEARNING SYSTEM CONFIGURATION
+# =============================================================================
+learning:
+  # Abilita sistema di apprendimento
+  enabled: true
+  
+  # Peso delle preferenze utente vs AI (0.0 - 1.0)
+  # 0.0 = solo AI, 1.0 = solo preferenze utente
+  user_preference_weight: 0.7
+  
+  # Numero minimo di feedback prima di iniziare a imparare
+  min_feedback_count: 3
+
+# =============================================================================
+# WEB INTERFACE CONFIGURATION
+# =============================================================================
+web:
+  # Host (0.0.0.0 per accesso da tutta la rete)
+  host: '0.0.0.0'
+  
+  # Port
+  port: 5000
+  
+  # Debug mode (disabilita in produzione)
+  debug: false
+  
+  # Enable WebSocket for real-time updates
+  websocket_enabled: true
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+database:
+  # Path al database
+  path: './data/light_jockey.db'
+  
+  # Enable auto-backup
+  backup_enabled: true
+  backup_interval: 86400  # secondi (24 ore)
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: 'INFO'
+  
+  # Log file path
+  file: './logs/light_jockey.log'
+  
+  # Max log file size (MB)
+  max_size: 10
+  
+  # Number of backup files to keep
+  backup_count: 5

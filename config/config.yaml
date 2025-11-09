@@ -1,0 +1,137 @@
+ai:
+  provider: gemini
+  gemini:
+    api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
+    model: gemini-pro
+  claude:
+    api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
+    model: claude-sonnet-4-20250514
+audio:
+  input_device: 2
+  sample_rate: 44100
+  buffer_size: 2048
+  channels: 1
+  beat_sensitivity: 0.5
+  frequency_ranges:
+    bass:
+    - 20
+    - 250
+    mid:
+    - 250
+    - 4000
+    treble:
+    - 4000
+    - 20000
+lights:
+  auto_discover: false
+  
+  manual_ips:
+    # ============================================
+    # ZONA 1: DJ CONSOLE & TV (5 luci)
+    # ============================================
+    - '192.168.0.153'  # 0  - Prima sinistra DJ
+    - '192.168.0.22'   # 1  - Seconda sinistra DJ
+    - '192.168.0.118'  # 2  - TV dietro DJ (CENTRALE)
+    - '192.168.0.84'   # 3  - Prima destra DJ
+    - '192.168.0.234'  # 4  - Seconda destra DJ
+    
+    # ============================================
+    # ZONA 2: CORRIDOIO (1 luce)
+    # ============================================
+    - '192.168.0.108'  # 5  - Davanti porta (transizione)
+    
+    # ============================================
+    # ZONA 3: SALONE PRINCIPALE (8 luci)
+    # Organizzate per creare effetti coordinati
+    # ============================================
+    - '192.168.0.70'   # 6  - Prima sinistra salone
+    - '192.168.0.211'  # 7  - Prima sinistra salone (2)
+    - '192.168.0.123'  # 8  - Penultima sinistra
+    - '192.168.0.173'  # 9  - Infondo sinistra
+    - '192.168.0.190'  # 10 - Prima destra salone
+    - '192.168.0.98'   # 11 - Prima destra salone (2)
+    - '192.168.0.93'   # 12 - Penultima destra
+    - '192.168.0.48'   # 13 - Ultima destra
+    - '192.168.0.245'  # 14 - Ultima infondo
+    
+    # ============================================
+    # ZONA 4: BANCONE CLIENTI (4 luci)
+    # Sopra il bancone dove servi
+    # ============================================
+    - '192.168.0.171'  # 15 - Prima luce bancone
+    - '192.168.0.130'  # 16 - Seconda luce bancone
+    - '192.168.0.120'  # 17 - Terza luce bancone
+    - '192.168.0.37'   # 18 - Quarta luce bancone
+    
+    # ============================================
+    # ZONA 5: BANCONE PEDANA (8 luci - lavoro bartender)
+    # Organizzate: 4 sinistra + 4 destra
+    # ============================================
+    - '192.168.0.82'   # 19 - Pedana sx 1
+    - '192.168.0.251'  # 20 - Pedana sx 2
+    - '192.168.0.194'  # 21 - Pedana sx 3
+    - '192.168.0.35'   # 22 - Pedana sx 4
+    - '192.168.0.45'   # 23 - Pedana dx 1
+    - '192.168.0.246'  # 24 - Pedana dx 2
+    - '192.168.0.73'   # 25 - Pedana dx 3
+    - '192.168.0.78'   # 26 - Pedana dx 4
+    
+    # ============================================
+    # ZONA 6: STRIP LED BOTTIGLIERA (3 strip)
+    # Retrobancone per illuminare bottiglie
+    # ============================================
+    - '192.168.0.107'  # 27 - Strip LED bottigliera 1
+    - '192.168.0.100'  # 28 - Strip LED bottigliera 2
+    - '192.168.0.104'  # 29 - Strip LED soffitto
+    
+    # ============================================
+    # ZONA 7: EXTRA
+    # ============================================
+    - '192.168.0.231'  # 30 - Luce extra (da identificare meglio)
+  
+  broadcast_address: '255.255.255.255'
+  timeout: 2
+  max_retries: 3
+
+  broadcast_address: 255.255.255.255
+  timeout: 2
+  max_retries: 3
+effects:
+  transition_speed: 500
+  update_rate: 30
+  smoothing: 0.7
+  default_brightness: 200
+recognition:
+  enabled: true
+  sample_duration: 5
+  recognition_interval: 30
+  cache_enabled: true
+  cache_duration: 3600
+ai_colors:
+  enabled: true
+  prompt_template: "Analizza questa canzone e suggerisci una palette di colori per\
+    \ luci RGB.\n\nTitolo: {title}\nArtista: {artist}\nGenere: {genre}\nMood/Energia:\
+    \ {mood}\nTesto (estratto): {lyrics_snippet}\n\nFornisci:\n1. Una palette di 3-5\
+    \ colori in formato RGB (0-255)\n2. Il tipo di effetto consigliato (wave, strobe,\
+    \ pulse, fade, static)\n3. La velocit\xE0 degli effetti (slow, medium, fast)\n\
+    4. Una breve spiegazione della scelta\n\nRispondi SOLO in formato JSON:\n{\n \
+    \ \"palette\": [[R,G,B], [R,G,B], ...],\n  \"effect_type\": \"wave\",\n  \"effect_speed\"\
+    : \"medium\",\n  \"reasoning\": \"breve spiegazione\"\n}\n"
+learning:
+  enabled: true
+  user_preference_weight: 0.7
+  min_feedback_count: 3
+web:
+  host: 0.0.0.0
+  port: 5040
+  debug: false
+  websocket_enabled: true
+database:
+  path: ./data/light_jockey.db
+  backup_enabled: true
+  backup_interval: 86400
+logging:
+  level: INFO
+  file: ./logs/light_jockey.log
+  max_size: 10
+  backup_count: 5

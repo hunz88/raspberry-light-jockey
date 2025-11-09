@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Light Jockey Control Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; color: #667eea; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1em; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .card h2 { color: #333; margin-bottom: 20px; font-size: 1.8em; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: 600;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-success { background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); }
+        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .btn-test {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+        .lights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .light-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .light-card:hover { transform: translateY(-5px); }
+        .light-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+        .light-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .light-ip { font-size: 1.2em; font-weight: bold; color: #333; }
+        .light-name { color: #666; font-size: 0.9em; }
+        input[type="checkbox"] { width: 30px; height: 30px; cursor: pointer; }
+        .light-actions { margin-top: 15px; display: flex; gap: 10px; }
+        .controls { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 20px; }
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .color-picker input[type="color"] {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .brightness-slider { flex: 1; min-width: 200px; }
+        .brightness-slider input[type="range"] { width: 100%; }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .stats { display: flex; gap: 20px; margin-top: 20px; }
+        .stat-box {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-number { font-size: 3em; font-weight: bold; }
+        .stat-label { font-size: 1.1em; opacity: 0.9; }
+        .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Light Jockey Control Panel</h1>
+            <p>Gestisci le tue luci Wiz</p>
+        </div>
+        <div id="statusMessage"></div>
+        <div class="card">
+            <h2>🔍 Scopri Luci</h2>
+            <p style="color: #666; margin-bottom: 20px;">Cerca tutte le luci Wiz sulla tua rete</p>
+            <button class="btn" onclick="discoverLights()">Cerca Luci Wiz</button>
+            <div id="stats" class="stats hidden">
+                <div class="stat-box">
+                    <div class="stat-number" id="totalLights">0</div>
+                    <div class="stat-label">Luci Trovate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="selectedLights">0</div>
+                    <div class="stat-label">Luci Selezionate</div>
+                </div>
+            </div>
+        </div>
+        <div id="lightsSection" class="card hidden">
+            <h2>💡 Le Tue Luci</h2>
+            <p style="color: #666; margin-bottom: 20px;">Seleziona le luci che vuoi controllare</p>
+            <div class="action-buttons">
+                <button class="btn" onclick="selectAll()">Seleziona Tutte</button>
+                <button class="btn" onclick="deselectAll()">Deseleziona Tutte</button>
+                <button class="btn btn-success" onclick="saveSelection()">💾 Salva Selezione</button>
+            </div>
+            <div id="lightsGrid" class="lights-grid"></div>
+        </div>
+        <div id="controlSection" class="card hidden">
+            <h2>🎨 Controllo Manuale</h2>
+            <div class="controls">
+                <div class="color-picker">
+                    <label>Colore:</label>
+                    <input type="color" id="colorPicker" value="#ff0066">
+                    <button class="btn" onclick="setColor()">Applica</button>
+                </div>
+                <div class="brightness-slider">
+                    <label>Luminosità: <span id="brightnessValue">200</span></label>
+                    <input type="range" id="brightness" min="0" max="255" value="200" 
+                           oninput="document.getElementById('brightnessValue').textContent = this.value">
+                </div>
+            </div>
+            <div class="action-buttons" style="margin-top: 20px;">
+                <button class="btn btn-danger" onclick="turnOffLights()">🔴 Spegni Tutte</button>
+            </div>
+        </div>
+        <div id="launchSection" class="card hidden">
+            <h2>🚀 Avvia Light Jockey</h2>
+            <p style="color: #666; margin-bottom: 20px;">Ora puoi avviare il sistema dal terminale</p>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; font-family: monospace;">
+                <div style="background: #333; color: #0f0; padding: 15px; border-radius: 5px;">
+                    $ source venv/bin/activate<br>
+                    $ python3 main.py
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let discoveredLights = [];
+        function showStatus(msg, type) {
+            const div = document.getElementById('statusMessage');
+            div.className = `status ${type}`;
+            div.textContent = msg;
+            div.style.display = 'block';
+            setTimeout(() => div.style.display = 'none', 5000);
+        }
+        function showLoading(show) {
+            if (show) {
+                const div = document.createElement('div');
+                div.id = 'loading';
+                div.className = 'loading';
+                div.innerHTML = '<div class="spinner"></div><p>Ricerca...</p>';
+                document.querySelector('.container').appendChild(div);
+            } else {
+                const div = document.getElementById('loading');
+                if (div) div.remove();
+            }
+        }
+        async function discoverLights() {
+            showLoading(true);
+            try {
+                const res = await fetch('/api/discover', {method: 'POST'});
+                const data = await res.json();
+                if (data.success) {
+                    discoveredLights = data.lights;
+                    renderLights();
+                    updateStats();
+                    document.getElementById('lightsSection').classList.remove('hidden');
+                    document.getElementById('controlSection').classList.remove('hidden');
+                    document.getElementById('launchSection').classList.remove('hidden');
+                    document.getElementById('stats').classList.remove('hidden');
+                    showStatus(`✅ Trovate ${data.count} luci!`, 'success');
+                } else {
+                    showStatus('❌ Nessuna luce trovata', 'error');
+                }
+            } catch (e) {
+                showStatus(`❌ Errore: ${e.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        function renderLights() {
+            const grid = document.getElementById('lightsGrid');
+            grid.innerHTML = '';
+            discoveredLights.forEach(light => {
+                const card = document.createElement('div');
+                card.className = `light-card ${light.selected ? 'selected' : ''}`;
+                card.id = `light-${light.ip}`;
+                card.innerHTML = `
+                    <div class="light-header">
+                        <div>
+                            <div class="light-ip">💡 ${light.ip}</div>
+                            <div class="light-name">${light.name}</div>
+                        </div>
+                        <input type="checkbox" id="check-${light.ip}" ${light.selected ? 'checked' : ''}
+                               onchange="toggleLight('${light.ip}')">
+                    </div>
+                    <div class="light-actions">
+                        <button class="btn btn-test" onclick="testLight('${light.ip}')">✨ Test</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        function toggleLight(ip) {
+            const light = discoveredLights.find(l => l.ip === ip);
+            if (light) {
+                light.selected = !light.selected;
+                const card = document.getElementById(`light-${ip}`);
+                light.selected ? card.classList.add('selected') : card.classList.remove('selected');
+                updateStats();
+            }
+        }
+        function selectAll() {
+            discoveredLights.forEach(l => {
+                l.selected = true;
+                document.getElementById(`check-${l.ip}`).checked = true;
+                document.getElementById(`light-${l.ip}`).classList.add('selected');
+            });
+            updateStats();
+        }
+        function deselectAll() {
+            discoveredLights.forEach(l => {
+                l.selected = false;
+                document.getElementById(`check-${l.ip}`).checked = false;
+                document.getElementById(`light-${l.ip}`).classList.remove('selected');
+            });
+            updateStats();
+        }
+        function updateStats() {
+            document.getElementById('totalLights').textContent = discoveredLights.length;
+            document.getElementById('selectedLights').textContent = discoveredLights.filter(l => l.selected).length;
+        }
+        async function saveSelection() {
+            const selected = discoveredLights.filter(l => l.selected).map(l => l.ip);
+            if (selected.length === 0) {
+                showStatus('⚠️ Seleziona almeno una luce!', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/lights/select', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({light_ips: selected})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showStatus(`✅ Salvate ${selected.length} luci!`, 'success');
+                } else {
+                    showStatus(`❌ Errore: ${data.error}`, 'error');
+                }
+            } catch (e) {
+                showStatus(`❌ Errore: ${e.message}`, 'error');
+            }
+        }
+        async function testLight(ip) {
+            showStatus(`✨ Test luce ${ip}...`, 'info');
+            try {
+                const res = await fetch(`/api/lights/test/${ip}`, {method: 'POST'});
+                const data = await res.json();
+                showStatus(data.success ? `✅ Luce ${ip} testata!` : `❌ ${data.error}`, data.success ? 'success' : 'error');
+            } catch (e) {
+                showStatus(`❌ Errore: ${e.message}`, 'error');
+            }
+        }
+        async function setColor() {
+            const color = document.getElementById('colorPicker').value;
+            const brightness = document.getElementById('brightness').value;
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+            try {
+                const res = await fetch('/api/lights/set-color', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({r, g, b, brightness})
+                });
+                const data = await res.json();
+                showStatus(data.success ? '✅ Colore applicato!' : `❌ ${data.error}`, data.success ? 'success' : 'error');
+            } catch (e) {
+                showStatus(`❌ Errore: ${e.message}`, 'error');
+            }
+        }
+        async function turnOffLights() {
+            if (!confirm('Vuoi spegnere tutte le luci?')) return;
+            try {
+                const res = await fetch('/api/lights/off', {method: 'POST'});
+                const data = await res.json();
+                showStatus(data.success ? '✅ Luci spente!' : `❌ ${data.error}`, data.success ? 'success' : 'error');
+            } catch (e) {
+                showStatus(`❌ Errore: ${e.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -25,12 +25,21 @@ class EffectEngine:
         # DYNAMIC COLOR SYSTEM
         from effects.color_system import ColorSystem
         self.color_system = ColorSystem()
-        
+
+        # 🆕 AI DIRECTOR SYSTEM
+        from ai.music_structure_analyzer import MusicStructureAnalyzer
+        from ai.ai_director import AIDirector
+        self.music_structure = MusicStructureAnalyzer()
+        self.ai_director = None  # Initialized after effects are set
+
         # Effect settings
         self.current_effect = 0
         self.effect_duration = config.get('effect_duration', 45)
         self.last_effect_change = time.time()
         self.last_debug_time = 0
+
+        # AI Director mode
+        self.ai_director_enabled = True
         
         # Song recognition
         self.shazam_client = None
@@ -105,8 +114,12 @@ class EffectEngine:
             "🎪 Peak Time"
         ]
         
-        print("⚡ Effect Engine + Intelligence + Colors")
+        # Initialize AI Director after effects are defined
+        self.ai_director = AIDirector(self)
+
+        print("⚡ Effect Engine + Intelligence + Colors + AI Director")
         print(f"   🎨 Effects: {len(self.effects)}")
+        print(f"   🎬 AI Director: {'ENABLED' if self.ai_director_enabled else 'DISABLED'}")
     
     async def start(self):
         if self.is_running:
@@ -128,19 +141,22 @@ class EffectEngine:
         await self.wiz_controller.turn_off()
     
     async def _effect_loop(self):
-        print(f"\n🎬 MUSIC INTELLIGENCE + DYNAMIC COLORS Active!\n")
-        
+        print(f"\n🎬 AI DIRECTOR + MUSIC INTELLIGENCE + DYNAMIC COLORS Active!\n")
+
         last_song_check = 0
-        
+
         while self.is_running:
             try:
                 audio_data = self.audio_analyzer.get_audio_features()
                 current_time = time.time()
                 time_in_effect = current_time - self.last_effect_change
-                
+
                 # Update Intelligence
                 self.music_intelligence.update(audio_data)
-                
+
+                # 🆕 Update Music Structure Analyzer
+                self.music_structure.update(audio_data, self.music_intelligence)
+
                 # Update Color System
                 self.color_system.set_emotion(self.music_intelligence.current_emotion)
                 
@@ -154,13 +170,15 @@ class EffectEngine:
                     self.last_debug_time = current_time
                     silent = audio_data.get('is_silent', False)
                     status = "🔇 SILENT" if silent else "🔊 PLAYING"
-                    
+
                     print(f"\n{'='*60}")
                     print(f"🎨 {self.effect_names[self.current_effect]}")
-                    print(f"⏱️  {int(time_in_effect)}s / {self.effect_duration}s")
+                    print(f"⏱️  {int(time_in_effect)}s")
                     print(f"📊 Bass={audio_data['bass']:.2f} Energy={audio_data['energy']:.2f}")
                     print(f"🎵 {status}")
                     print(f"🧠 {self.music_intelligence.get_status_string()}")
+                    print(f"🎭 {self.music_structure.get_status_string()}")
+                    print(f"🎬 {self.ai_director.get_status_string()}")
                     if self.current_song_name:
                         print(f"🎼 {self.current_song_name}")
                     print(f"{'='*60}\n")
@@ -174,38 +192,43 @@ class EffectEngine:
                     await asyncio.sleep(0.2)
                     continue
                 
-                # INTELLIGENT CHANGE
-                if time_in_effect > self.effect_duration:
-                    recommended = self.music_intelligence.get_recommended_effect(self.effect_names)
-                    
-                    if recommended and recommended in self.effect_names:
-                        old = self.effect_names[self.current_effect]
-                        self.current_effect = self.effect_names.index(recommended)
-                        self.last_effect_change = current_time
-                        
-                        print(f"\n{'🧠'*30}")
-                        print(f"🧠 INTELLIGENT CHANGE 🧠")
-                        print(f"📤 {old}")
-                        print(f"📥 {recommended}")
-                        print(f"🎯 {self.music_intelligence.current_section} / {self.music_intelligence.current_emotion}")
-                        print(f"{'🧠'*30}\n")
-                        
-                    elif audio_data['energy'] < 0.3 or audio_data['beat']:
-                        old = self.effect_names[self.current_effect]
-                        
-                        if self.suggested_effect_idx is not None:
-                            self.current_effect = self.suggested_effect_idx
-                            self.suggested_effect_idx = None
-                        else:
-                            self.current_effect = (self.current_effect + 1) % len(self.effects)
-                        
-                        new = self.effect_names[self.current_effect]
-                        self.last_effect_change = current_time
-                        
-                        print(f"\n{'🌟'*30}")
-                        print(f"✨ SMART CHANGE ✨")
-                        print(f"📤 {old} → 📥 {new}")
-                        print(f"{'🌟'*30}\n")
+                # 🎬 AI DIRECTOR DECISION MAKING
+                if self.ai_director_enabled:
+                    decision = self.ai_director.analyze_and_decide(
+                        audio_data,
+                        self.music_structure,
+                        self.music_intelligence
+                    )
+
+                    if decision:
+                        # AI Director wants to change effect
+                        new_effect_name = decision.get('effect')
+
+                        if new_effect_name and new_effect_name in self.effect_names:
+                            old_effect_name = self.effect_names[self.current_effect]
+                            self.current_effect = self.effect_names.index(new_effect_name)
+                            self.last_effect_change = current_time
+
+                            # Update color system mood
+                            color_mood = decision.get('color_mood', 'balanced')
+                            self.color_system.current_mood = color_mood
+
+                else:
+                    # Fallback: Old intelligent change logic
+                    if time_in_effect > self.effect_duration:
+                        recommended = self.music_intelligence.get_recommended_effect(self.effect_names)
+
+                        if recommended and recommended in self.effect_names:
+                            old = self.effect_names[self.current_effect]
+                            self.current_effect = self.effect_names.index(recommended)
+                            self.last_effect_change = current_time
+
+                            print(f"\n{'🧠'*30}")
+                            print(f"🧠 INTELLIGENT CHANGE 🧠")
+                            print(f"📤 {old}")
+                            print(f"📥 {recommended}")
+                            print(f"🎯 {self.music_intelligence.current_section} / {self.music_intelligence.current_emotion}")
+                            print(f"{'🧠'*30}\n")
                 
                 if audio_data['beat']:
                     self.beat_history.append(current_time)
@@ -264,7 +287,19 @@ class EffectEngine:
     def hsv_to_rgb(self, h, s, v):
         r, g, b = colorsys.hsv_to_rgb(h, s, v)
         return int(r * 255), int(g * 255), int(b * 255)
-    
+
+    def get_dynamic_intensity(self, base_intensity=1.0):
+        """Get dynamic intensity from AI Director"""
+        if self.ai_director_enabled and self.ai_director:
+            # Get audio data
+            audio_data = self.audio_analyzer.get_audio_features()
+            return self.ai_director.get_dynamic_intensity(
+                base_intensity,
+                audio_data,
+                self.music_structure
+            )
+        return base_intensity
+
     # ========================================
     # EFFECTS WITH DYNAMIC COLORS + MOVEMENT
     # ========================================
@@ -383,11 +418,15 @@ class EffectEngine:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def effect_center_expand(self, audio_data):
-        """💥 Explosion with DYNAMIC COLORS"""
+        """💥 Explosion with DYNAMIC COLORS + AI DIRECTOR"""
         beat = audio_data['beat']
-        intensity = self.music_intelligence.get_effect_intensity()
-        
-        if beat or self.music_intelligence.current_section == "drop":
+
+        # 🆕 Use AI Director's dynamic intensity
+        base_intensity = self.music_intelligence.get_effect_intensity()
+        intensity = self.get_dynamic_intensity(base_intensity)
+
+        # Reset wave on beat or drop detection
+        if beat or self.music_structure.in_drop:
             self.wave_position = 0
         else:
             self.wave_position += intensity

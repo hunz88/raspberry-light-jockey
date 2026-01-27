@@ -8,7 +8,10 @@ import asyncio
 import yaml
 import sys
 import signal
+import os
+import re
 from pathlib import Path
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
@@ -47,10 +50,28 @@ class LightJockey:
         print("=" * 60)
     
     def _load_config(self, config_path):
-        """Load config"""
+        """Load config with environment variable support"""
         try:
+            # Load environment variables from .env file
+            load_dotenv()
+
+            # Read config file
             with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
+                config_content = f.read()
+
+            # Replace ${VAR_NAME} with environment variables
+            def replace_env_var(match):
+                var_name = match.group(1)
+                value = os.getenv(var_name)
+                if value is None:
+                    print(f"⚠️  Warning: Environment variable {var_name} not set")
+                    return match.group(0)  # Keep original ${VAR_NAME}
+                return value
+
+            config_content = re.sub(r'\$\{([^}]+)\}', replace_env_var, config_content)
+
+            # Parse YAML
+            config = yaml.safe_load(config_content)
             print(f"📝 Config loaded: {config_path}")
             return config
         except Exception as e:
@@ -131,15 +152,39 @@ class LightJockey:
 async def main():
     """Entry point"""
     app = LightJockey()
-    
+
+    # Use a flag for graceful shutdown
+    shutdown_event = asyncio.Event()
+
     def signal_handler(sig, frame):
-        print("\n⚠️  Interrupt...")
-        asyncio.create_task(app.stop())
-    
+        print("\n⚠️  Interrupt received...")
+        shutdown_event.set()
+
     signal.signal(signal.SIGINT, signal_handler)
-    
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
-        await app.start()
+        # Start the app in a task
+        app_task = asyncio.create_task(app.start())
+
+        # Wait for shutdown signal or app to finish
+        done, pending = await asyncio.wait(
+            [app_task, asyncio.create_task(shutdown_event.wait())],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+
+        # If shutdown was triggered, stop the app
+        if shutdown_event.is_set():
+            await app.stop()
+
+        # Cancel any pending tasks
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback

@@ -1,10 +1,10 @@
 ai:
   provider: gemini
   gemini:
-    api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
+    api_key: ${GEMINI_API_KEY}  # Set in .env file
     model: gemini-pro
   claude:
-    api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
+    api_key: ${CLAUDE_API_KEY}  # Set in .env file
     model: claude-sonnet-4-20250514
 audio:
   input_device: 2
@@ -90,10 +90,6 @@ lights:
     - '192.168.0.231'  # 30 - Luce extra (da identificare meglio)
   
   broadcast_address: '255.255.255.255'
-  timeout: 2
-  max_retries: 3
-
-  broadcast_address: 255.255.255.255
   timeout: 2
   max_retries: 3
 effects:

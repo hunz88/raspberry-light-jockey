@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Jockey - Setup Luci</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Light Jockey</h1>
+            <p>Configurazione Luci con MAC Address</p>
+        </header>
+
+        <div class="control-panel">
+            <button id="discoverBtn" class="btn btn-primary">
+                🔍 Scopri Luci sulla Rete
+            </button>
+            <button id="saveBtn" class="btn btn-success" disabled>
+                💾 Salva Configurazione
+            </button>
+            <button id="testAllBtn" class="btn btn-secondary" disabled>
+                🎨 Test Colore (Tutte)
+            </button>
+            <button id="offBtn" class="btn btn-danger" disabled>
+                ⚫ Spegni Tutte
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div id="lightsContainer" class="lights-container">
+            <!-- Lights will be populated here -->
+        </div>
+
+        <div class="info-panel">
+            <h3>ℹ️ Come usare:</h3>
+            <ol>
+                <li>Clicca <strong>"Scopri Luci"</strong> per trovare tutte le luci WiZ sulla rete</li>
+                <li>Per ogni luce, clicca <strong>"Identifica"</strong> - lampeggerà in ROSSO per 5 secondi</li>
+                <li>Assegna un <strong>nome</strong> e una <strong>zona</strong> a ogni luce</li>
+                <li>Imposta la <strong>posizione</strong> (0, 1, 2, ...) nell'ordine che vuoi</li>
+                <li>Clicca <strong>"Salva Configurazione"</strong> per salvare nel config.yaml</li>
+            </ol>
+            <p><strong>Importante:</strong> Le luci vengono identificate per MAC address, quindi funzioneranno anche se il router cambia gli IP!</p>
+        </div>
+
+        <div class="zones-legend">
+            <h3>🎨 Zone Disponibili:</h3>
+            <div class="zones-grid">
+                {% for zone in zones %}
+                <div class="zone-item" style="border-left: 4px solid {{ zone.color }}">
+                    <strong>{{ zone.name }}</strong><br>
+                    <small>ID: {{ zone.id }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ZONES = {{ zones | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/setup.js') }}"></script>
+</body>
+</html>

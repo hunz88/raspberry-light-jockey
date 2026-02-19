@@ -1,0 +1,54 @@
+# =============================================================================
+# Sunset Bar DJLuci - Requirements per NVIDIA Jetson
+# =============================================================================
+# Note: numpy e alcuni pacchetti potrebbero già essere installati con JetPack.
+# Il venv li reinstalla in isolamento per evitare conflitti.
+# =============================================================================
+
+# ─── Audio Processing ─────────────────────────────────────────────────────────
+pyaudio==0.2.14
+numpy>=1.24.0
+librosa==0.10.1
+soundfile==0.12.1
+scipy>=1.10.0
+
+# ─── Song Recognition & Metadata ──────────────────────────────────────────────
+shazamio==0.4.0.1
+aiohttp==3.9.1
+requests==2.31.0
+
+# ─── Wiz Lights Control ───────────────────────────────────────────────────────
+pywizlight==0.5.14
+
+# ─── AI Integration (cloud fallback) ─────────────────────────────────────────
+google-generativeai==0.3.2
+anthropic==0.18.1
+
+# ─── LLM locale via Ollama ────────────────────────────────────────────────────
+# Ollama stesso si installa via script (curl https://ollama.com/install.sh | sh)
+# Questo è il client Python
+ollama>=0.1.6
+
+# ─── Computer Vision (Camera + Crowd Analysis) ────────────────────────────────
+# opencv-python-headless è la versione leggera senza GUI
+# Per CUDA completo, compilare OpenCV dai sorgenti con JetPack
+opencv-python-headless>=4.8.0.76
+
+# YOLOv8 per rilevamento persone e pose
+ultralytics>=8.0.0
+
+# ─── Web Interface ────────────────────────────────────────────────────────────
+flask==3.0.0
+flask-cors==4.0.0
+flask-socketio==5.3.5
+python-socketio==5.10.0
+
+# ─── Database & Configuration ─────────────────────────────────────────────────
+pyyaml==6.0.1
+
+# ─── Machine Learning ─────────────────────────────────────────────────────────
+scikit-learn==1.3.2
+
+# ─── Utilities ────────────────────────────────────────────────────────────────
+python-dotenv==1.0.0
+colorama==0.4.6

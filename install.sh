@@ -10,9 +10,18 @@ echo "🎵 Raspberry Pi Light Jockey - Installation Script"
 echo "=================================================="
 echo ""
 
-# Check if running on Raspberry Pi
-if ! grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
-    echo "⚠️  Warning: This doesn't appear to be a Raspberry Pi"
+# Check if running on supported hardware (Raspberry Pi or Jetson Nano)
+IS_RPI=false
+IS_JETSON=false
+
+if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
+    IS_RPI=true
+    echo "✅ Raspberry Pi detected"
+elif [ -f /etc/nv_tegra_release ] || grep -q -i "tegra\|jetson" /proc/cpuinfo 2>/dev/null; then
+    IS_JETSON=true
+    echo "✅ NVIDIA Jetson detected"
+else
+    echo "⚠️  Warning: This doesn't appear to be a Raspberry Pi or Jetson"
     read -p "Continue anyway? (y/n) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -145,7 +154,7 @@ from pywizlight import discovery
 async def discover_lights():
     print("\nSearching for Wiz lights (this may take 10-20 seconds)...")
     try:
-        bulbs = await discovery.discover_lights(broadcast_space="192.168.1.255")
+        bulbs = await discovery.discover_lights(broadcast_space="255.255.255.255")
         if bulbs:
             print(f"\n✅ Found {len(bulbs)} Wiz light(s):")
             for bulb in bulbs:
@@ -221,7 +230,7 @@ echo "   source venv/bin/activate"
 echo "   python3 main.py"
 echo ""
 echo "5. Open your browser to:"
-echo "   http://$(hostname -I | awk '{print $1}'):5000"
+echo "   http://$(hostname -I | awk '{print $1}'):5040"
 echo ""
 echo "🎉 Enjoy your smart light show!"
 echo ""

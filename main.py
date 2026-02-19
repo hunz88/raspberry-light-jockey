@@ -131,13 +131,16 @@ class LightJockey:
 async def main():
     """Entry point"""
     app = LightJockey()
-    
-    def signal_handler(sig, frame):
+
+    loop = asyncio.get_running_loop()
+
+    def _request_stop():
         print("\n⚠️  Interrupt...")
-        asyncio.create_task(app.stop())
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    
+        loop.create_task(app.stop())
+
+    loop.add_signal_handler(signal.SIGINT, _request_stop)
+    loop.add_signal_handler(signal.SIGTERM, _request_stop)
+
     try:
         await app.start()
     except Exception as e:

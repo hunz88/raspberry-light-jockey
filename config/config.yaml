@@ -88,15 +88,12 @@ lights:
     # ZONA 7: EXTRA
     # ============================================
     - '192.168.0.231'  # 30 - Luce extra (da identificare meglio)
-  
+
   broadcast_address: '255.255.255.255'
   timeout: 2
   max_retries: 3
-
-  broadcast_address: 255.255.255.255
-  timeout: 2
-  max_retries: 3
 effects:
+  effect_duration: 45
   transition_speed: 500
   update_rate: 30
   smoothing: 0.7

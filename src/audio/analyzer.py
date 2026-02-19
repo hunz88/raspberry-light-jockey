@@ -28,6 +28,8 @@ class AudioAnalyzer:
         self.energy_history = deque(maxlen=43)  # ~1 second at 44100/1024
         self.last_beat_time = 0
         self.min_beat_interval = 0.2  # Minimum 200ms between beats
+        self.beat_timestamps = deque(maxlen=20)  # For BPM estimation
+        self.estimated_bpm = 0
         
         # Frequency ranges
         freq_ranges = config.get('frequency_ranges', {})
@@ -173,7 +175,7 @@ class AudioAnalyzer:
             'treble': min(1.0, treble),
             'energy': min(1.0, energy * 10),  # Scale up
             'beat': beat,
-            'bpm': 0  # TODO: BPM detection
+            'bpm': self._estimate_bpm()
         }
         
         return features
@@ -203,8 +205,23 @@ class AudioAnalyzer:
         
         if is_beat:
             self.last_beat_time = current_time
-        
+            self.beat_timestamps.append(current_time)
+
         return is_beat
+
+    def _estimate_bpm(self):
+        """Estimate BPM from recent beat timestamps"""
+        if len(self.beat_timestamps) < 4:
+            return self.estimated_bpm  # Keep last known value
+
+        beats = list(self.beat_timestamps)
+        intervals = [beats[i] - beats[i-1] for i in range(1, len(beats))]
+
+        avg_interval = np.mean(intervals)
+        if avg_interval > 0:
+            self.estimated_bpm = int(60 / avg_interval)
+
+        return self.estimated_bpm
     
     def get_audio_features(self):
         """Get current audio features with silence detection"""
@@ -215,7 +232,7 @@ class AudioAnalyzer:
                 'treble': 0.0,
                 'energy': 0.0,
                 'beat': False,
-                'bpm': 0,
+                'bpm': self.estimated_bpm,
                 'is_silent': True
             }
         

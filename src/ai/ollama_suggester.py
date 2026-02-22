@@ -47,6 +47,7 @@ class OllamaColorSuggester:
                     "model": self.model_name,
                     "prompt": prompt,
                     "stream": False,
+                    "format": "json",
                     "options": {
                         "temperature": 0.7,
                         "num_predict": 256

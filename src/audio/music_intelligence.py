@@ -78,46 +78,59 @@ class MusicIntelligence:
             self.current_emotion = "neutral"  # 😐
     
     def _detect_section(self):
-        """Detect song section (intro, verse, chorus, drop, break)"""
-        if len(self.energy_history) < 50:
+        """Detect song section using relative thresholds (calibrated to actual energy range)"""
+        if len(self.energy_history) < 40:
             self.current_section = "intro"
             return
-        
-        recent_energy = list(self.energy_history)[-50:]
-        very_recent = list(self.energy_history)[-10:]
-        
-        avg_recent = np.mean(recent_energy)
-        avg_very_recent = np.mean(very_recent)
-        
-        energy_change = avg_very_recent - avg_recent
-        
+
+        all_energy = list(self.energy_history)
+        recent = all_energy[-30:]
+        very_recent = all_energy[-8:]
+
+        baseline = np.mean(all_energy) + 0.001  # long-term song average
+        avg_recent = np.mean(recent)
+        avg_now = np.mean(very_recent)
+
+        energy_change = avg_now - avg_recent
+        ratio = avg_now / baseline  # 1.0 = at baseline, >1 = above, <1 = below
+
         current_time = time.time()
-        
-        # DROP detection (sudden energy increase)
-        if energy_change > 0.3 and avg_very_recent > 0.6:
+
+        # DROP: sudden spike significantly above baseline
+        if energy_change > 0.07 and ratio > 1.35:
+            if self.current_section != "drop":
+                print("💥 DROP DETECTED!")
             self.current_section = "drop"
             self.last_drop_time = current_time
-            print("💥 DROP DETECTED!")
-        
-        # BREAK detection (sudden energy decrease)
-        elif energy_change < -0.3 or avg_very_recent < 0.1:
+
+        # BREAK: sudden fall OR sustained quiet
+        elif energy_change < -0.07 and ratio < 0.55:
+            if self.current_section != "break":
+                print("🔇 BREAK DETECTED!")
             self.current_section = "break"
             self.last_break_time = current_time
-            print("🔇 BREAK DETECTED!")
-        
-        # BUILDUP detection (gradual increase)
-        elif 0.1 < energy_change < 0.3:
+
+        # BUILDUP: gradual upward trend
+        elif 0.025 < energy_change < 0.07:
+            if self.current_section != "buildup":
+                print("📈 BUILDUP...")
             self.current_section = "buildup"
-            print("📈 BUILDUP...")
-        
-        # CHORUS (high stable energy)
-        elif avg_very_recent > 0.6 and np.var(very_recent) < 0.05:
+
+        # CHORUS: sustained above baseline, stable
+        elif ratio > 1.2 and np.var(very_recent) < 0.025:
             self.current_section = "chorus"
-        
-        # VERSE (medium stable energy)
-        elif 0.3 < avg_very_recent < 0.6:
+
+        # VERSE: near baseline, moderate energy
+        elif 0.7 < ratio < 1.2:
             self.current_section = "verse"
-        
+
+        # BREAK: sustained well below baseline
+        elif ratio < 0.5:
+            if self.current_section != "break":
+                print("🔇 QUIET BREAK...")
+            self.current_section = "break"
+            self.last_break_time = current_time
+
         else:
             self.current_section = "transition"
     

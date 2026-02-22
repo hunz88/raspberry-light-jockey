@@ -41,6 +41,32 @@ class EffectEngine:
         # Song recipe - maps sections to effect indices for current song
         self.song_recipe = None
         self.prev_section = None
+
+        # Song personality - controls HOW effects behave (speed, punch, flash)
+        self.song_personality = {'speed': 1.0, 'beat_flash': 0.0}
+
+        # Genre personalities: define the CHARACTER of each genre
+        # speed: animation loop multiplier (0.4=slow/dreamy, 3.0=frenetic)
+        # beat_flash: probability of white flash on each beat (0=none, 1=every beat)
+        self.GENRE_PERSONALITIES = {
+            'dance':      {'speed': 2.2, 'beat_flash': 0.75},
+            'electronic': {'speed': 1.4, 'beat_flash': 0.45},
+            'pop':        {'speed': 1.6, 'beat_flash': 0.5},
+            'rock':       {'speed': 1.9, 'beat_flash': 0.65},
+            'hard rock':  {'speed': 2.2, 'beat_flash': 0.8},
+            'metal':      {'speed': 3.0, 'beat_flash': 0.9},
+            'hip hop':    {'speed': 1.3, 'beat_flash': 0.5},
+            'r&b':        {'speed': 0.9, 'beat_flash': 0.25},
+            'jazz':       {'speed': 0.5, 'beat_flash': 0.05},
+            'soul':       {'speed': 0.7, 'beat_flash': 0.1},
+            'blues':      {'speed': 0.6, 'beat_flash': 0.1},
+            'classical':  {'speed': 0.4, 'beat_flash': 0.0},
+            'reggae':     {'speed': 0.8, 'beat_flash': 0.2},
+            'latin':      {'speed': 1.8, 'beat_flash': 0.5},
+            'country':    {'speed': 1.1, 'beat_flash': 0.3},
+            'soundtrack': {'speed': 0.6, 'beat_flash': 0.15},
+        }
+        self._DEFAULT_PERSONALITY = {'speed': 1.0, 'beat_flash': 0.35}
         
         # Effect state
         self.is_running = False
@@ -170,6 +196,14 @@ class EffectEngine:
                 return dict(recipe)
         return dict(self._DEFAULT_RECIPE)
 
+    def _build_genre_personality(self, genre):
+        """Build animation personality for the detected genre"""
+        genre_lower = genre.lower()
+        for key, personality in self.GENRE_PERSONALITIES.items():
+            if key in genre_lower:
+                return dict(personality)
+        return dict(self._DEFAULT_PERSONALITY)
+
     async def start(self):
         if self.is_running:
             return
@@ -233,12 +267,14 @@ class EffectEngine:
                     silent = audio_data.get('is_silent', False)
                     status = "🔇 SILENT" if silent else "🔊 PLAYING"
                     
+                    sp = self.song_personality
                     print(f"\n{'='*60}")
                     print(f"🎨 {self.effect_names[self.current_effect]}")
                     print(f"⏱️  {int(time_in_effect)}s / {self.effect_duration}s")
                     print(f"📊 Bass={audio_data['bass']:.2f} Energy={audio_data['energy']:.2f}")
                     print(f"🎵 {status}")
                     print(f"🧠 {self.music_intelligence.get_status_string()}")
+                    print(f"🕹️  speed={sp.get('speed',1.0):.1f}x | beat_flash={sp.get('beat_flash',0):.0%}")
                     if self.current_song_name:
                         print(f"🎼 {self.current_song_name}")
                     print(f"{'='*60}\n")
@@ -287,9 +323,17 @@ class EffectEngine:
                 
                 if audio_data['beat']:
                     self.beat_history.append(current_time)
-                
+                    # Beat flash: song-personality-driven white flash on beats
+                    beat_flash = self.song_personality.get('beat_flash', 0.0)
+                    if beat_flash > 0 and random.random() < beat_flash:
+                        asyncio.create_task(self._beat_flash())
+
                 await self.effects[self.current_effect](audio_data)
-                await asyncio.sleep(0.05)
+
+                # Speed personality: faster songs get more animation frames
+                sp_speed = max(0.3, self.song_personality.get('speed', 1.0))
+                loop_sleep = max(0.018, 0.05 / sp_speed)
+                await asyncio.sleep(loop_sleep)
                 
             except Exception as e:
                 print(f"\n❌ Error: {e}")
@@ -316,9 +360,12 @@ class EffectEngine:
 
                     # Build section→effect recipe from genre
                     self.song_recipe = self._build_genre_recipe(genre)
+                    # Build animation personality from genre
+                    self.song_personality = self._build_genre_personality(genre)
                     print(f"   ✅ {self.current_song_name}")
                     print(f"   🎸 {genre}")
                     print(f"   🎭 Recipe: drop={self.effect_names[self.song_recipe['drop']]} | chorus={self.effect_names[self.song_recipe['chorus']]} | break={self.effect_names[self.song_recipe['break']]}")
+                    print(f"   🕹️  Personality: speed={self.song_personality['speed']}x | beat_flash={self.song_personality['beat_flash']}")
 
                     # Fetch lyrics in background for richer AI context
                     loop = asyncio.get_event_loop()
@@ -347,6 +394,18 @@ class EffectEngine:
                             self.color_system.set_ai_palette(ai_result['palette'])
         except Exception as e:
             print(f"   ❌ {e}")
+
+    async def _beat_flash(self):
+        """Brief white flash on all active lights synchronized to the beat"""
+        try:
+            tasks = []
+            for light in self.wiz_controller.lights:
+                tasks.append(self._set_light(light, 255, 255, 255, 255))
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await asyncio.sleep(0.04)
+            # Fade back to current color (just let the next effect frame handle it)
+        except Exception:
+            pass
 
     def _fetch_lyrics(self, artist, title):
         """Fetch lyrics from lyrics.ovh (free, no API key). Returns short snippet or None."""

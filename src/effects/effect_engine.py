@@ -7,7 +7,6 @@ import time
 import random
 import colorsys
 import math
-from collections import deque
 
 
 class EffectEngine:
@@ -46,9 +45,6 @@ class EffectEngine:
         self.rainbow_offset = 0
         self.chase_position = 0
         self.strobe_state = 0
-        
-        # Beat history
-        self.beat_history = deque(maxlen=4)
         
         # Zone definitions
         self.zones = {
@@ -190,25 +186,27 @@ class EffectEngine:
                         print(f"🎯 {self.music_intelligence.current_section} / {self.music_intelligence.current_emotion}")
                         print(f"{'🧠'*30}\n")
                         
-                    elif audio_data['energy'] < 0.3 or audio_data['beat']:
-                        old = self.effect_names[self.current_effect]
-                        
-                        if self.suggested_effect_idx is not None:
-                            self.current_effect = self.suggested_effect_idx
-                            self.suggested_effect_idx = None
-                        else:
-                            self.current_effect = (self.current_effect + 1) % len(self.effects)
-                        
-                        new = self.effect_names[self.current_effect]
-                        self.last_effect_change = current_time
-                        
-                        print(f"\n{'🌟'*30}")
-                        print(f"✨ SMART CHANGE ✨")
-                        print(f"📤 {old} → 📥 {new}")
-                        print(f"{'🌟'*30}\n")
-                
-                if audio_data['beat']:
-                    self.beat_history.append(current_time)
+                    else:
+                        # Fallback: always rotate after timeout.
+                        # Prefer a beat boundary for a musical transition, but
+                        # force the change if we've already waited an extra 5 s.
+                        overtime = time_in_effect - self.effect_duration
+                        if audio_data['beat'] or audio_data['energy'] < 0.3 or overtime > 5:
+                            old = self.effect_names[self.current_effect]
+
+                            if self.suggested_effect_idx is not None:
+                                self.current_effect = self.suggested_effect_idx
+                                self.suggested_effect_idx = None
+                            else:
+                                self.current_effect = (self.current_effect + 1) % len(self.effects)
+
+                            new = self.effect_names[self.current_effect]
+                            self.last_effect_change = current_time
+
+                            print(f"\n{'🌟'*30}")
+                            print(f"✨ SMART CHANGE ✨")
+                            print(f"📤 {old} → 📥 {new}")
+                            print(f"{'🌟'*30}\n")
                 
                 await self.effects[self.current_effect](audio_data)
                 await asyncio.sleep(0.05)
@@ -256,6 +254,11 @@ class EffectEngine:
     async def _set_light(self, light, r, g, b, brightness):
         try:
             from pywizlight import PilotBuilder
+            # Clamp all channels to the valid [0, 255] range.
+            r = max(0, min(255, int(r)))
+            g = max(0, min(255, int(g)))
+            b = max(0, min(255, int(b)))
+            brightness = max(0, min(255, int(brightness)))
             pilot = PilotBuilder(rgb=(r, g, b), brightness=brightness)
             await light.turn_on(pilot)
         except:

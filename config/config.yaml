@@ -13,7 +13,7 @@ audio:
   input_device: 2
   sample_rate: 44100
   buffer_size: 2048
-  channels: 1
+  channels: 2
   beat_sensitivity: 0.5
   frequency_ranges:
     bass:

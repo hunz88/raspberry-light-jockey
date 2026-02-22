@@ -2,7 +2,7 @@ ai:
   provider: ollama
   ollama:
     host: 'http://localhost:11434'
-    model: 'llama3:8b'
+    model: 'orca-mini:3b'
   gemini:
     api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
     model: gemini-pro

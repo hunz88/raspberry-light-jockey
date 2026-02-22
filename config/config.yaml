@@ -101,6 +101,30 @@ effects:
   update_rate: 30
   smoothing: 0.7
   default_brightness: 200
+
+  # ============================================================
+  # ZONE ATTIVE (opzionale)
+  # Se questa sezione è assente → tutte le zone sono attive.
+  # Per disabilitare una zona durante le prove, commentala.
+  # Le luci delle zone commentate restano spente e vengono
+  # ignorate da tutti gli effetti automaticamente.
+  #
+  # Zone disponibili: dj, corridor, salon_left, salon_right,
+  #   salon_back, bar_top, bar_floor_left, bar_floor_right,
+  #   strips, extra
+  # Zone composite (comode): salon, bar, bar_floor
+  # ============================================================
+  # active_zones:
+  #   - dj
+  #   - corridor
+  #   - salon_left
+  #   - salon_right
+  #   - salon_back
+  #   - bar_top
+  #   - bar_floor_left
+  #   - bar_floor_right
+  #   - strips
+  #   - extra
 recognition:
   enabled: true
   sample_duration: 5

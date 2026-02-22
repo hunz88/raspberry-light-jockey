@@ -67,7 +67,29 @@ class EffectEngine:
         self.zones['salon'] = self.zones['salon_left'] + self.zones['salon_right'] + self.zones['salon_back']
         self.zones['bar_floor'] = self.zones['bar_floor_left'] + self.zones['bar_floor_right']
         self.zones['bar'] = self.zones['bar_top'] + self.zones['bar_floor']
-        
+
+        # Active zones filter
+        # Base zone names (no composites) used for counting and logging
+        _base_zones = ['dj', 'corridor', 'salon_left', 'salon_right', 'salon_back',
+                       'bar_top', 'bar_floor_left', 'bar_floor_right', 'strips', 'extra']
+        active_zones_cfg = config.get('active_zones', None)
+        if active_zones_cfg is not None:
+            active_indices = set()
+            for zone_name in active_zones_cfg:
+                if zone_name in self.zones:
+                    active_indices.update(self.zones[zone_name])
+            self.inactive_ips = set()
+            for idx, ip in enumerate(self.wiz_controller.light_ips):
+                if idx not in active_indices:
+                    self.inactive_ips.add(ip)
+            inactive_zones = [z for z in _base_zones if z not in active_zones_cfg]
+            print(f"\n🗺️  Zone attive  ({len(active_indices)} luci): {', '.join(active_zones_cfg)}")
+            if inactive_zones:
+                print(f"🚫 Zone inattive: {', '.join(inactive_zones)}")
+        else:
+            self.inactive_ips = set()
+            print(f"\n🗺️  Tutte le zone attive ({len(self.wiz_controller.lights)} luci)")
+
         # Effects
         self.effects = [
             self.effect_invasion_wave,
@@ -254,6 +276,8 @@ class EffectEngine:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def _set_light(self, light, r, g, b, brightness):
+        if light.ip in self.inactive_ips:
+            return
         try:
             from pywizlight import PilotBuilder
             pilot = PilotBuilder(rgb=(r, g, b), brightness=brightness)

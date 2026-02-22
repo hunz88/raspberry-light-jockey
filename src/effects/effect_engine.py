@@ -67,7 +67,31 @@ class EffectEngine:
         self.zones['salon'] = self.zones['salon_left'] + self.zones['salon_right'] + self.zones['salon_back']
         self.zones['bar_floor'] = self.zones['bar_floor_left'] + self.zones['bar_floor_right']
         self.zones['bar'] = self.zones['bar_top'] + self.zones['bar_floor']
-        
+
+        # Active zones filtering
+        self._primitive_zones = [
+            'dj', 'corridor', 'salon_left', 'salon_right', 'salon_back',
+            'bar_top', 'bar_floor_left', 'bar_floor_right', 'strips', 'extra'
+        ]
+        active_zones_cfg = config.get('active_zones', None)
+        if active_zones_cfg is None:
+            self.active_light_indices = None
+            print("🗺️  Zone attive: tutte (nessun filtro active_zones in config)")
+        else:
+            self.active_light_indices = set()
+            resolved = []
+            for zone_name in active_zones_cfg:
+                if zone_name in self.zones:
+                    self.active_light_indices.update(self.zones[zone_name])
+                    # Track which primitive zones are covered
+                    resolved.append(zone_name)
+            active_names = [z for z in self._primitive_zones
+                            if any(idx in self.active_light_indices for idx in self.zones[z])]
+            inactive_names = [z for z in self._primitive_zones if z not in active_names]
+            print(f"🗺️  Zone attive  ({len(self.active_light_indices)} luci): {', '.join(active_names)}")
+            if inactive_names:
+                print(f"🚫 Zone inattive: {', '.join(inactive_names)}")
+
         # Effects
         self.effects = [
             self.effect_invasion_wave,
@@ -254,6 +278,14 @@ class EffectEngine:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def _set_light(self, light, r, g, b, brightness):
+        # Single filter point: skip lights in inactive zones
+        if self.active_light_indices is not None:
+            try:
+                idx = self.wiz_controller.lights.index(light)
+                if idx not in self.active_light_indices:
+                    return
+            except ValueError:
+                pass
         try:
             from pywizlight import PilotBuilder
             pilot = PilotBuilder(rgb=(r, g, b), brightness=brightness)

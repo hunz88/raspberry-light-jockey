@@ -63,7 +63,44 @@ class EffectEngine:
         self.zones['salon'] = self.zones['salon_left'] + self.zones['salon_right'] + self.zones['salon_back']
         self.zones['bar_floor'] = self.zones['bar_floor_left'] + self.zones['bar_floor_right']
         self.zones['bar'] = self.zones['bar_top'] + self.zones['bar_floor']
-        
+
+        # Zone filtering — read active_zones from config.
+        # When not specified, all zones are active (full-venue mode).
+        configured_active = config.get('active_zones', None)
+        if configured_active is None:
+            self._enabled_indices = None  # None = all lights enabled
+        else:
+            self._enabled_indices: set = set()
+            for zone_name in configured_active:
+                if zone_name in self.zones:
+                    self._enabled_indices.update(self.zones[zone_name])
+                else:
+                    print(f"   ⚠️  Zona sconosciuta ignorata: '{zone_name}'")
+
+        # Fast light→index lookup used by _set_light() to honour zone filter
+        self._light_index: dict = {
+            light: idx for idx, light in enumerate(wiz_controller.lights)
+        }
+
+        # Log active zone summary
+        if self._enabled_indices is None:
+            print("🗺️  Zone: tutte attive")
+        else:
+            active_zone_names = [
+                name for name, indices in self.zones.items()
+                if any(i in self._enabled_indices for i in indices)
+                and '+' not in name  # skip composite aliases
+            ]
+            # filter out composite zones (salon, bar, bar_floor) from the log
+            leaf_zones = ['dj', 'corridor', 'salon_left', 'salon_right',
+                          'salon_back', 'bar_top', 'bar_floor_left',
+                          'bar_floor_right', 'strips', 'extra']
+            active_leaves = [z for z in leaf_zones if z in (configured_active or [])]
+            inactive_leaves = [z for z in leaf_zones if z not in (configured_active or [])]
+            print(f"🗺️  Zone attive  ({len(self._enabled_indices)} luci): {', '.join(active_leaves) or 'nessuna'}")
+            if inactive_leaves:
+                print(f"🚫 Zone inattive: {', '.join(inactive_leaves)}")
+
         # Effects
         self.effects = [
             self.effect_invasion_wave,
@@ -252,6 +289,11 @@ class EffectEngine:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def _set_light(self, light, r, g, b, brightness):
+        # Skip lights that belong to inactive zones (zone filtering).
+        if self._enabled_indices is not None:
+            idx = self._light_index.get(light)
+            if idx is None or idx not in self._enabled_indices:
+                return
         try:
             from pywizlight import PilotBuilder
             # Clamp all channels to the valid [0, 255] range.

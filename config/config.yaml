@@ -97,6 +97,41 @@ effects:
   update_rate: 30
   smoothing: 0.7
   default_brightness: 200
+
+  # ============================================================
+  # ZONE ATTIVE — per prove in zone specifiche del locale
+  # Commenta le zone che NON vuoi attivare.
+  # Se togli tutta la sezione active_zones, il sistema usa
+  # tutte le zone (comportamento normale a pieno regime).
+  #
+  # Zone disponibili:
+  #   dj             → luci 0-4  (console DJ + TV)
+  #   corridor       → luce 5    (corridoio / porta)
+  #   salon_left     → luci 6-9  (salone sinistra)
+  #   salon_right    → luci 10-13 (salone destra)
+  #   salon_back     → luce 14   (fondo salone)
+  #   bar_top        → luci 15-18 (sopra bancone clienti)
+  #   bar_floor_left → luci 19-22 (pedana bartender sx)
+  #   bar_floor_right→ luci 23-26 (pedana bartender dx)
+  #   strips         → luci 27-29 (strip LED bottigliera)
+  #   extra          → luce 30   (extra)
+  #
+  # Scorciatoie (espandono le zone figlie):
+  #   salon          → salon_left + salon_right + salon_back
+  #   bar_floor      → bar_floor_left + bar_floor_right
+  #   bar            → bar_top + bar_floor_left + bar_floor_right
+  # ============================================================
+  active_zones:
+    - dj
+    - corridor
+    - salon_left
+    - salon_right
+    - salon_back
+    - bar_top
+    - bar_floor_left
+    - bar_floor_right
+    - strips
+    - extra
 recognition:
   enabled: true
   sample_duration: 5

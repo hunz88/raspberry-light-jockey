@@ -61,34 +61,96 @@ class AudioAnalyzer:
         print(f"   Buffer size: {self.buffer_size}")
         print(f"   Device: {self.input_device if self.input_device else 'default'}")
     
+    def _try_open_stream(self, device_index, channels):
+        """Try to open a stream with given device and channel count. Returns stream or None."""
+        try:
+            stream = self.audio.open(
+                format=pyaudio.paInt16,
+                channels=channels,
+                rate=self.sample_rate,
+                input=True,
+                input_device_index=device_index,
+                frames_per_buffer=self.buffer_size,
+                stream_callback=self._audio_callback
+            )
+            return stream, channels
+        except Exception:
+            return None, channels
+
+    def _find_working_input(self):
+        """Auto-discover a working input device + channel count."""
+        n = self.audio.get_device_count()
+        print(f"🔍 Scanning {n} audio devices...")
+
+        candidates = []
+
+        # Prefer configured device first
+        if self.input_device is not None:
+            candidates.append(self.input_device)
+
+        # Then all devices with at least 1 input channel
+        for i in range(n):
+            try:
+                info = self.audio.get_device_info_by_index(i)
+                if info.get('maxInputChannels', 0) > 0 and i not in candidates:
+                    candidates.append(i)
+            except Exception:
+                pass
+
+        for dev_idx in candidates:
+            try:
+                info = self.audio.get_device_info_by_index(dev_idx)
+                name = info.get('name', '?')
+                max_ch = int(info.get('maxInputChannels', 0))
+                if max_ch == 0:
+                    continue
+
+                # Try channels in order: configured, 1, 2
+                for ch in sorted({self.channels, 1, min(2, max_ch)}, key=lambda x: abs(x - self.channels)):
+                    if ch < 1 or ch > max_ch:
+                        continue
+                    stream, used_ch = self._try_open_stream(dev_idx, ch)
+                    if stream:
+                        print(f"   ✅ Device [{dev_idx}] '{name}' — {used_ch}ch @ {self.sample_rate}Hz")
+                        self.channels = used_ch
+                        self.input_device = dev_idx
+                        return stream
+
+                print(f"   ⛔ Device [{dev_idx}] '{name}' — no working config")
+            except Exception:
+                pass
+
+        return None
+
     def start(self):
         """Start audio capture and analysis"""
         if self.is_running:
             return
-        
-        try:
-            # Open audio stream
-            self.stream = self.audio.open(
-                format=pyaudio.paInt16,
-                channels=self.channels,
-                rate=self.sample_rate,
-                input=True,
-                input_device_index=self.input_device,
-                frames_per_buffer=self.buffer_size,
-                stream_callback=self._audio_callback
-            )
-            
-            self.is_running = True
-            
-            # Start analysis thread
-            self.analysis_thread = threading.Thread(target=self._analysis_loop, daemon=True)
-            self.analysis_thread.start()
-            
-            print("🎤 Audio capture started")
-            
-        except Exception as e:
-            print(f"❌ Failed to start audio: {e}")
+
+        # First try the configured device/channels directly
+        stream = None
+        if self.input_device is not None:
+            stream, _ = self._try_open_stream(self.input_device, self.channels)
+            if stream:
+                print(f"🎤 Using configured device [{self.input_device}] — {self.channels}ch")
+
+        # Auto-discover if configured device failed
+        if stream is None:
+            print("⚠️  Configured audio device failed, auto-discovering...")
+            stream = self._find_working_input()
+
+        if stream is None:
+            print("❌ No working audio input found. Running without audio reactivity.")
             self.is_running = False
+            return
+
+        self.stream = stream
+        self.is_running = True
+
+        self.analysis_thread = threading.Thread(target=self._analysis_loop, daemon=True)
+        self.analysis_thread.start()
+
+        print("🎤 Audio capture started")
     
     def stop(self):
         """Stop audio capture"""

@@ -34,6 +34,7 @@ class EffectEngine:
         
         # Song recognition
         self.shazam_client = None
+        self.ai_suggester = None
         self.current_song_name = None
         self.suggested_effect_idx = None
         
@@ -255,15 +256,32 @@ class EffectEngine:
                     title = song_info.get('title', 'Unknown')
                     artist = song_info.get('artist', 'Unknown')
                     genre = song_info.get('genre', 'Unknown')
-                    
+
                     self.current_song_name = f"{artist} - {title}"
                     self.music_intelligence.set_song_metadata(genre)
-                    
-                    # UPDATE COLOR SYSTEM
+
+                    # Update color system from genre (fallback)
                     self.color_system.set_genre(genre)
-                    
+
                     print(f"   ✅ {self.current_song_name}")
                     print(f"   🎸 {genre}")
+
+                    # Ask AI for a richer palette
+                    if self.ai_suggester:
+                        audio_features = self.audio_analyzer.get_audio_features()
+                        loop = asyncio.get_event_loop()
+                        ai_result = await loop.run_in_executor(
+                            None,
+                            lambda: self.ai_suggester.suggest_colors(
+                                song_info,
+                                audio_features={
+                                    'energy': audio_features.get('energy', 0.5),
+                                    'bpm': audio_features.get('bpm', 0)
+                                }
+                            )
+                        )
+                        if ai_result:
+                            self.color_system.set_ai_palette(ai_result['palette'])
         except Exception as e:
             print(f"   ❌ {e}")
     

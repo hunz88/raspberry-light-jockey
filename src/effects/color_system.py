@@ -48,6 +48,18 @@ class ColorSystem:
         
         print("🎨 Dynamic Color System initialized")
     
+    def set_ai_palette(self, palette_rgb):
+        """Set palette from AI-provided RGB colors (list of [R,G,B])"""
+        hues = []
+        for rgb in palette_rgb[:3]:
+            r, g, b = rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0
+            h, s, v = colorsys.rgb_to_hsv(r, g, b)
+            hues.append(h)
+        while len(hues) < 3:
+            hues.append(hues[-1] if hues else 0.0)
+        self.current_palette = hues
+        print(f"🤖 AI Palette applicata: {[f'{h:.2f}' for h in self.current_palette]}")
+
     def set_genre(self, genre):
         """Set color palette based on genre"""
         if not genre:

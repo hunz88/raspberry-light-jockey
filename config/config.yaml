@@ -1,10 +1,13 @@
 ai:
-  provider: gemini
+  provider: ollama
+  ollama:
+    host: 'http://localhost:11434'
+    model: 'llama3:8b'
   gemini:
     api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
     model: gemini-pro
   claude:
-    api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
+    api_key: ''
     model: claude-sonnet-4-20250514
 audio:
   input_device: 2

@@ -32,7 +32,8 @@ class LightJockey:
         self.wiz_controller = None
         self.effect_engine = None
         self.shazam_client = None
-        
+        self.ai_suggester = None
+
         self.is_running = False
         
         print("\n🎵 Initializing audio analyzer...")
@@ -42,10 +43,47 @@ class LightJockey:
         print("\n🎼 Initializing Shazam...")
         recognition_config = self.config.get('recognition', {})
         self.shazam_client = ShazamClient(recognition_config)
-        
+
+        print("\n🤖 Initializing AI provider...")
+        self.ai_suggester = self._init_ai_provider()
+
         print("✅ Light Jockey initialized!")
         print("=" * 60)
     
+    def _init_ai_provider(self):
+        """Initialize AI provider from config"""
+        ai_config = self.config.get('ai', {})
+        provider = ai_config.get('provider', 'gemini')
+
+        try:
+            if provider == 'ollama':
+                from ai.ollama_suggester import OllamaColorSuggester
+                cfg = ai_config.get('ollama', {})
+                return OllamaColorSuggester(
+                    host=cfg.get('host', 'http://localhost:11434'),
+                    model=cfg.get('model', 'llama3:8b')
+                )
+            elif provider == 'gemini':
+                from ai.gemini_suggester import GeminiColorSuggester
+                cfg = ai_config.get('gemini', {})
+                return GeminiColorSuggester(
+                    api_key=cfg.get('api_key', ''),
+                    model=cfg.get('model', 'gemini-pro')
+                )
+            elif provider == 'claude':
+                from ai.claude_suggester import ClaudeColorSuggester
+                cfg = ai_config.get('claude', {})
+                return ClaudeColorSuggester(
+                    api_key=cfg.get('api_key', ''),
+                    model=cfg.get('model', 'claude-sonnet-4-20250514')
+                )
+            else:
+                print(f"⚠️  Provider AI sconosciuto: '{provider}' - AI disabilitata")
+                return None
+        except Exception as e:
+            print(f"⚠️  Errore init AI provider '{provider}': {e} - AI disabilitata")
+            return None
+
     def _load_config(self, config_path):
         """Load config"""
         try:
@@ -80,10 +118,15 @@ class LightJockey:
             effects_config
         )
         
-        # 🆕 CONNECT SHAZAM
+        # Connect Shazam
         print("\n🎵 Connecting Shazam to effect engine...")
         self.effect_engine.shazam_client = self.shazam_client
         print("   ✅ Shazam connected!")
+
+        # Connect AI provider
+        if self.ai_suggester:
+            self.effect_engine.ai_suggester = self.ai_suggester
+            print(f"   ✅ AI provider connected!")
         
         # Start audio
         self.audio_analyzer.start()

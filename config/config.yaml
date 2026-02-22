@@ -41,7 +41,7 @@ lights:
     - '192.168.0.108'  # 5  - Davanti porta (transizione)
     
     # ============================================
-    # ZONA 3: SALONE PRINCIPALE (8 luci)
+    # ZONA 3: SALONE PRINCIPALE (9 luci)
     # Organizzate per creare effetti coordinati
     # ============================================
     - '192.168.0.70'   # 6  - Prima sinistra salone
@@ -90,10 +90,6 @@ lights:
     - '192.168.0.231'  # 30 - Luce extra (da identificare meglio)
   
   broadcast_address: '255.255.255.255'
-  timeout: 2
-  max_retries: 3
-
-  broadcast_address: 255.255.255.255
   timeout: 2
   max_retries: 3
 effects:

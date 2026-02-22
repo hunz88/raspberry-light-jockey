@@ -445,8 +445,8 @@ class EffectEngine:
         try:
             from pywizlight import PilotBuilder
             pilot = PilotBuilder(rgb=(r, g, b), brightness=brightness)
-            await light.turn_on(pilot)
-        except:
+            await asyncio.wait_for(light.turn_on(pilot), timeout=0.12)
+        except Exception:
             pass
     
     def hsv_to_rgb(self, h, s, v):

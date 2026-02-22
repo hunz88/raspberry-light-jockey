@@ -79,21 +79,43 @@ class WizController:
     async def initialize(self):
         """Initialize connection to lights"""
         success = False
-        
+
         # Try auto-discovery first
         if self.auto_discover:
             success = await self.discover_lights()
-        
+
         # Fall back to manual IPs
         if not success and self.manual_ips:
             success = self.add_manual_lights()
-        
+
         if success:
             print(f"✅ Successfully connected to {len(self.lights)} light(s)")
+            await self._check_lights()
         else:
             print("❌ No lights found or connected")
-        
+
         return success
+
+    async def _check_lights(self):
+        """Test each light at startup and report which ones actually respond."""
+        print(f"\n🔎 Testing {len(self.lights)} lights (timeout 1.5s each)...")
+        ok, fail = [], []
+
+        async def _ping(light):
+            try:
+                await asyncio.wait_for(light.updateState(), timeout=1.5)
+                ok.append(light.ip)
+            except Exception:
+                fail.append(light.ip)
+
+        await asyncio.gather(*[_ping(l) for l in self.lights], return_exceptions=True)
+
+        print(f"   ✅ Responding ({len(ok)}): {', '.join(ok) if ok else 'none'}")
+        if fail:
+            print(f"   ❌ Not responding ({len(fail)}): {', '.join(fail)}")
+            print(f"   ⚠️  Quelle {len(fail)} luci potrebbero avere IP cambiato.")
+            print(f"      → Apri il router, assegna IP fissi alle WiZ, aggiorna config.yaml")
+        print()
     
     async def set_color(self, r, g, b, brightness=None):
         """

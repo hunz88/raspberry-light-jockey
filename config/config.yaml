@@ -2,7 +2,7 @@ ai:
   provider: ollama
   ollama:
     host: 'http://localhost:11434'
-    model: 'llama3:8b'
+    model: 'phi3:3.8b'
   gemini:
     api_key: AIzaSyAgql5HjMLom4TI-tzSfx7z_e9Khog0l0s
     model: gemini-pro
@@ -10,8 +10,8 @@ ai:
     api_key: ''
     model: claude-sonnet-4-20250514
 audio:
-  input_device: 2
-  sample_rate: 44100
+  input_device: 1
+  sample_rate: 48000
   buffer_size: 2048
   channels: 1
   beat_sensitivity: 0.5

@@ -49,8 +49,8 @@ class OllamaColorSuggester:
                     "stream": False,
                     "format": "json",
                     "options": {
-                        "temperature": 0.7,
-                        "num_predict": 256
+                        "temperature": 0.3,
+                        "num_predict": 150
                     }
                 },
                 timeout=30
@@ -74,62 +74,41 @@ class OllamaColorSuggester:
             return self._get_fallback_suggestion(song_info, audio_features)
 
     def _build_prompt(self, song_info, metadata, audio_features):
-        """Build prompt for Ollama"""
+        """Build prompt for Ollama - short and direct for small models"""
 
-        prompt = f"""Analyze this song and suggest a color palette for RGB lighting.
+        title = song_info.get('title', 'Unknown')
+        artist = song_info.get('artist', 'Unknown')
+        genre = song_info.get('genre', 'Unknown')
 
-**Song Information:**
-- Title: {song_info.get('title', 'Unknown')}
-- Artist: {song_info.get('artist', 'Unknown')}
-- Genre: {song_info.get('genre', 'Unknown')}
-"""
-
-        if metadata:
-            if metadata.get('lyrics_snippet'):
-                prompt += f"\n**Lyrics (excerpt):**\n{metadata['lyrics_snippet'][:200]}...\n"
-
-            if metadata.get('themes'):
-                themes_str = ', '.join(metadata['themes'][:3])
-                prompt += f"\n**Detected Themes:** {themes_str}\n"
-
+        energy_level = "medium"
+        bpm_info = ""
         if audio_features:
-            prompt += f"\n**Audio Characteristics:**"
-            if 'bpm' in audio_features and audio_features['bpm'] > 0:
-                prompt += f"\n- BPM: {audio_features['bpm']}"
-            if 'energy' in audio_features:
-                energy_level = "high" if audio_features['energy'] > 0.7 else "medium" if audio_features['energy'] > 0.3 else "low"
-                prompt += f"\n- Energy: {energy_level}"
+            energy = audio_features.get('energy', 0.5)
+            energy_level = "high" if energy > 0.7 else "low" if energy < 0.3 else "medium"
+            bpm = audio_features.get('bpm', 0)
+            if bpm > 0:
+                bpm_info = f", {int(bpm)} BPM"
 
-        prompt += """
+        prompt = f"""You are a bar lighting controller. Output ONLY valid JSON, no other text.
 
-**Task:**
-Suggest an RGB lighting scheme that matches the song's mood, theme, and energy.
+Song: "{title}" by {artist}
+Genre: {genre}
+Energy: {energy_level}{bpm_info}
 
-**Requirements:**
-1. Provide 3-5 colors in RGB format (values 0-255)
-2. Choose effect type: "wave", "strobe", "pulse", "fade", "static", "rainbow", "sparkle"
-3. Set effect speed: "slow", "medium", "fast"
-4. Explain your reasoning briefly
+Color rules:
+- Dance/Pop → bright yellows [255,255,0], pinks [255,0,128], cyans [0,255,255]
+- Rock/Metal → reds [200,0,0], oranges [255,80,0], deep blue [0,0,180]
+- Jazz/Soul → amber [255,140,0], purple [128,0,128], warm white [255,220,150]
+- Electronic → neon green [0,255,0], magenta [255,0,255], cyan [0,255,255]
+- Romantic/Slow → red [200,0,50], pink [255,100,150], warm [255,180,100]
+- Happy/Fun → yellow [255,255,0], orange [255,128,0], lime [128,255,0]
+- Soundtrack/Kids → bright mixed, rainbow effect
 
-**Color Guidelines:**
-- Water/Ocean themes → Blues, teals, aqua
-- Fire/Energy → Reds, oranges, yellows
-- Nature/Forest → Greens, browns, earth tones
-- Night/Mystery → Purples, deep blues, dark colors
-- Love/Romance → Pinks, reds, warm colors
-- Sadness → Blues, grays, cool tones
-- Happiness → Yellows, bright colors, warm tones
-- Electronic/Party → Vibrant, saturated colors
+Output exactly this JSON:
+{{"palette": [[R,G,B],[R,G,B],[R,G,B]], "effect_type": "pulse", "effect_speed": "medium", "reasoning": "short"}}
 
-**Response Format (JSON only, no other text):**
-```json
-{
-  "palette": [[R,G,B], [R,G,B], [R,G,B]],
-  "effect_type": "wave",
-  "effect_speed": "medium",
-  "reasoning": "brief explanation"
-}
-```"""
+effect_type options: wave, strobe, pulse, fade, static, rainbow, sparkle
+effect_speed options: slow, medium, fast"""
 
         return prompt
 

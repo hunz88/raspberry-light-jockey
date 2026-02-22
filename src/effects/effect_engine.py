@@ -37,6 +37,10 @@ class EffectEngine:
         self.ai_suggester = None
         self.current_song_name = None
         self.suggested_effect_idx = None
+
+        # Song recipe - maps sections to effect indices for current song
+        self.song_recipe = None
+        self.prev_section = None
         
         # Effect state
         self.is_running = False
@@ -130,9 +134,42 @@ class EffectEngine:
             "🎪 Peak Time"
         ]
         
+        # Genre recipes: map music sections → effect index
+        # Indices: 0=invasion_wave 1=perimeter_chase 2=ping_pong 3=center_expand
+        #          4=cascade_strobe 5=welcome_flow 6=bar_mode 7=party_wave
+        #          8=stereo_split 9=chase_around 10=strobe_zones 11=bottle_showcase
+        #          12=energy_pulse 13=rainbow_flow 14=peak_time
+        self.GENRE_RECIPES = {
+            'dance':      {'intro':13, 'verse':1,  'chorus':7,  'drop':4,  'break':11, 'buildup':12, 'transition':9},
+            'electronic': {'intro':13, 'verse':9,  'chorus':14, 'drop':4,  'break':13, 'buildup':12, 'transition':0},
+            'pop':        {'intro':13, 'verse':0,  'chorus':7,  'drop':3,  'break':11, 'buildup':12, 'transition':9},
+            'rock':       {'intro':5,  'verse':8,  'chorus':10, 'drop':4,  'break':2,  'buildup':3,  'transition':0},
+            'hard rock':  {'intro':5,  'verse':8,  'chorus':10, 'drop':4,  'break':2,  'buildup':3,  'transition':0},
+            'metal':      {'intro':0,  'verse':10, 'chorus':4,  'drop':14, 'break':2,  'buildup':3,  'transition':8},
+            'hip hop':    {'intro':5,  'verse':8,  'chorus':7,  'drop':10, 'break':6,  'buildup':12, 'transition':9},
+            'r&b':        {'intro':13, 'verse':5,  'chorus':7,  'drop':12, 'break':11, 'buildup':9,  'transition':6},
+            'jazz':       {'intro':13, 'verse':5,  'chorus':6,  'drop':12, 'break':11, 'buildup':9,  'transition':1},
+            'soul':       {'intro':13, 'verse':6,  'chorus':7,  'drop':12, 'break':11, 'buildup':9,  'transition':5},
+            'blues':      {'intro':5,  'verse':6,  'chorus':8,  'drop':12, 'break':11, 'buildup':9,  'transition':1},
+            'classical':  {'intro':13, 'verse':5,  'chorus':11, 'drop':3,  'break':13, 'buildup':9,  'transition':5},
+            'reggae':     {'intro':13, 'verse':5,  'chorus':7,  'drop':3,  'break':11, 'buildup':9,  'transition':6},
+            'latin':      {'intro':9,  'verse':1,  'chorus':7,  'drop':4,  'break':11, 'buildup':12, 'transition':9},
+            'country':    {'intro':5,  'verse':0,  'chorus':8,  'drop':12, 'break':11, 'buildup':9,  'transition':6},
+            'soundtrack': {'intro':13, 'verse':5,  'chorus':3,  'drop':14, 'break':13, 'buildup':3,  'transition':11},
+        }
+        self._DEFAULT_RECIPE = {'intro':13, 'verse':0, 'chorus':7, 'drop':4, 'break':11, 'buildup':12, 'transition':9}
+
         print("⚡ Effect Engine + Intelligence + Colors")
         print(f"   🎨 Effects: {len(self.effects)}")
-    
+
+    def _build_genre_recipe(self, genre):
+        """Build section→effect recipe for the detected genre"""
+        genre_lower = genre.lower()
+        for key, recipe in self.GENRE_RECIPES.items():
+            if key in genre_lower:
+                return dict(recipe)
+        return dict(self._DEFAULT_RECIPE)
+
     async def start(self):
         if self.is_running:
             return
@@ -165,10 +202,26 @@ class EffectEngine:
                 
                 # Update Intelligence
                 self.music_intelligence.update(audio_data)
-                
+
                 # Update Color System
                 self.color_system.set_emotion(self.music_intelligence.current_emotion)
-                
+
+                # SECTION CHANGE → immediate effect switch
+                current_section = self.music_intelligence.current_section
+                if current_section != self.prev_section:
+                    self.prev_section = current_section
+                    if self.song_recipe and current_section in self.song_recipe:
+                        new_idx = self.song_recipe[current_section]
+                        if new_idx != self.current_effect:
+                            old_name = self.effect_names[self.current_effect]
+                            self.current_effect = new_idx
+                            self.last_effect_change = current_time
+                            new_name = self.effect_names[self.current_effect]
+                            print(f"\n{'🎭'*30}")
+                            print(f"🎭 SECTION: {current_section.upper()} → {new_name}")
+                            print(f"📤 {old_name}")
+                            print(f"{'🎭'*30}\n")
+
                 # Shazam check
                 if current_time - last_song_check > 30:
                     last_song_check = current_time
@@ -259,17 +312,27 @@ class EffectEngine:
 
                     self.current_song_name = f"{artist} - {title}"
                     self.music_intelligence.set_song_metadata(genre)
-
-                    # Update color system from genre (fallback)
                     self.color_system.set_genre(genre)
 
+                    # Build section→effect recipe from genre
+                    self.song_recipe = self._build_genre_recipe(genre)
                     print(f"   ✅ {self.current_song_name}")
                     print(f"   🎸 {genre}")
+                    print(f"   🎭 Recipe: drop={self.effect_names[self.song_recipe['drop']]} | chorus={self.effect_names[self.song_recipe['chorus']]} | break={self.effect_names[self.song_recipe['break']]}")
 
-                    # Ask AI for a richer palette
+                    # Fetch lyrics in background for richer AI context
+                    loop = asyncio.get_event_loop()
+                    lyrics_snippet = await loop.run_in_executor(
+                        None,
+                        lambda: self._fetch_lyrics(artist, title)
+                    )
+                    if lyrics_snippet:
+                        song_info['lyrics_snippet'] = lyrics_snippet
+                        print(f"   📝 Lyrics: {lyrics_snippet[:60]}...")
+
+                    # Ask AI for palette (uses lyrics if available)
                     if self.ai_suggester:
                         audio_features = self.audio_analyzer.get_audio_features()
-                        loop = asyncio.get_event_loop()
                         ai_result = await loop.run_in_executor(
                             None,
                             lambda: self.ai_suggester.suggest_colors(
@@ -284,7 +347,23 @@ class EffectEngine:
                             self.color_system.set_ai_palette(ai_result['palette'])
         except Exception as e:
             print(f"   ❌ {e}")
-    
+
+    def _fetch_lyrics(self, artist, title):
+        """Fetch lyrics from lyrics.ovh (free, no API key). Returns short snippet or None."""
+        try:
+            import requests as req
+            import urllib.parse
+            artist_enc = urllib.parse.quote(artist)
+            title_enc = urllib.parse.quote(title)
+            r = req.get(f"https://api.lyrics.ovh/v1/{artist_enc}/{title_enc}", timeout=5)
+            if r.status_code == 200:
+                lyrics = r.json().get('lyrics', '')
+                # Return first 200 chars of lyrics (enough for mood context)
+                return lyrics.replace('\n', ' ').strip()[:200] if lyrics else None
+        except Exception:
+            pass
+        return None
+
     async def set_zone(self, zone_name, r, g, b, brightness=200):
         if zone_name not in self.zones:
             return

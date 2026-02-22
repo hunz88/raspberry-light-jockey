@@ -65,28 +65,29 @@ class OllamaColorSuggester:
         title = song_info.get('title', 'Unknown')
         artist = song_info.get('artist', 'Unknown')
         genre = song_info.get('genre', 'Unknown')
+        lyrics = song_info.get('lyrics_snippet', '')
 
         energy_level = "medium"
         if audio_features:
             energy = audio_features.get('energy', 0.5)
             energy_level = "high" if energy > 0.7 else "low" if energy < 0.3 else "medium"
 
-        return f"""Bar lighting for: "{title}" by {artist} (Genre: {genre}, Energy: {energy_level})
+        lyrics_line = f'\nLyrics hint: "{lyrics[:120]}"' if lyrics else ""
 
-Give 3 RGB colors (0-255) and an effect. Examples:
-- Dance/Pop: R:255 G:0 B:200, R:0 G:255 B:255, R:255 G:255 B:0, effect:strobe, speed:fast
-- Rock/Metal: R:200 G:0 B:0, R:255 G:80 B:0, R:0 G:0 B:180, effect:wave, speed:fast
-- Jazz/Soul: R:255 G:140 B:0, R:128 G:0 B:128, R:255 G:220 B:150, effect:pulse, speed:slow
-- Electronic: R:0 G:255 B:0, R:255 G:0 B:255, R:0 G:255 B:255, effect:strobe, speed:fast
-- Romantic: R:200 G:0 B:50, R:255 G:100 B:150, R:255 G:180 B:100, effect:fade, speed:slow
-- Kids/Fun: R:255 G:255 B:0, R:255 G:0 B:128, R:0 G:200 B:255, effect:rainbow, speed:fast
+        return f"""Bar lighting for: "{title}" by {artist}
+Genre: {genre} | Energy: {energy_level}{lyrics_line}
+
+Pick 3 RGB colors that match the mood and vibe. Examples:
+- Dance/Party: R:255 G:0 B:200, R:0 G:255 B:255, R:255 G:255 B:0
+- Rock/Metal: R:200 G:0 B:0, R:255 G:80 B:0, R:0 G:0 B:180
+- Jazz/Soul: R:255 G:140 B:0, R:128 G:0 B:128, R:255 G:220 B:150
+- Romantic/Slow: R:200 G:0 B:50, R:255 G:100 B:150, R:255 G:180 B:100
+- Happy/Fun: R:255 G:255 B:0, R:255 G:0 B:128, R:0 G:200 B:255
 
 Answer:
 Color 1: R:___ G:___ B:___
 Color 2: R:___ G:___ B:___
-Color 3: R:___ G:___ B:___
-Effect: ___
-Speed: ___"""
+Color 3: R:___ G:___ B:___"""
 
     def _parse_response(self, text):
         """Try JSON first, then extract from natural language text"""

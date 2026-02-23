@@ -38,6 +38,14 @@ class EffectEngine:
         self.current_song_name = None
         self.suggested_effect_idx = None
 
+        # Shazam failure tracking: dopo MAX_FAILS tentativi falliti consecutivi
+        # il sistema smette di riprovare per BLACKOUT_SECONDS secondi.
+        self._shazam_fail_count = 0
+        self._shazam_max_fails = 5
+        self._shazam_blackout_until = 0.0
+        self._shazam_blackout_seconds = 120
+        self._shazam_bpm = None  # BPM ufficiale dall'ultimo riconoscimento riuscito
+
         # Song recipe - maps sections to effect indices for current song
         self.song_recipe = None
         self.prev_section = None
@@ -341,18 +349,34 @@ class EffectEngine:
     
     async def _check_song_and_suggest(self):
         try:
+            now = time.time()
+
+            # Se siamo in blackout post-fallimenti, salta silenziosamente
+            if now < self._shazam_blackout_until:
+                remaining = int(self._shazam_blackout_until - now)
+                print(f"\n🎵 Shazam in pausa ({remaining}s) — mantengo contesto attuale")
+                return
+
             print("\n🎵 Checking song...")
             audio_data = self.audio_analyzer.get_raw_audio(duration=8.0)
             if audio_data is None:
                 return
-            
+
             if self.shazam_client:
                 song_info = await self.shazam_client.recognize_song(audio_data, self.audio_analyzer.sample_rate)
-                
+
                 if song_info:
+                    # Riconoscimento riuscito: reset contatore fallimenti
+                    self._shazam_fail_count = 0
+                    self._shazam_blackout_until = 0.0
+
                     title = song_info.get('title', 'Unknown')
                     artist = song_info.get('artist', 'Unknown')
                     genre = song_info.get('genre', 'Unknown')
+                    bpm = song_info.get('bpm')
+
+                    if bpm:
+                        self._shazam_bpm = bpm
 
                     self.current_song_name = f"{artist} - {title}"
                     self.music_intelligence.set_song_metadata(genre)
@@ -364,6 +388,8 @@ class EffectEngine:
                     self.song_personality = self._build_genre_personality(genre)
                     print(f"   ✅ {self.current_song_name}")
                     print(f"   🎸 {genre}")
+                    if bpm:
+                        print(f"   🥁 BPM ufficiale: {bpm}")
                     print(f"   🎭 Recipe: drop={self.effect_names[self.song_recipe['drop']]} | chorus={self.effect_names[self.song_recipe['chorus']]} | break={self.effect_names[self.song_recipe['break']]}")
                     print(f"   🕹️  Personality: speed={self.song_personality['speed']}x | beat_flash={self.song_personality['beat_flash']}")
 
@@ -386,12 +412,25 @@ class EffectEngine:
                                 song_info,
                                 audio_features={
                                     'energy': audio_features.get('energy', 0.5),
-                                    'bpm': audio_features.get('bpm', 0)
+                                    'bpm': self._shazam_bpm or audio_features.get('bpm', 0)
                                 }
                             )
                         )
                         if ai_result:
                             self.color_system.set_ai_palette(ai_result['palette'])
+
+                else:
+                    # Riconoscimento fallito
+                    self._shazam_fail_count += 1
+                    remaining_attempts = self._shazam_max_fails - self._shazam_fail_count
+                    if remaining_attempts > 0:
+                        print(f"   ⚠️  Canzone non trovata ({self._shazam_fail_count}/{self._shazam_max_fails}) — continuo con contesto attuale")
+                    else:
+                        self._shazam_blackout_until = now + self._shazam_blackout_seconds
+                        self._shazam_fail_count = 0
+                        print(f"   🔇 Shazam non trova la canzone dopo {self._shazam_max_fails} tentativi")
+                        print(f"   ⏸️  Pausa riconoscimento per {self._shazam_blackout_seconds}s — mantengo stile attuale")
+
         except Exception as e:
             print(f"   ❌ {e}")
 

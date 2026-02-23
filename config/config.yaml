@@ -15,6 +15,9 @@ audio:
   buffer_size: 2048
   channels: 1
   beat_sensitivity: 0.5
+  # Guadagno microfono: 1.0 = normale. Aumenta (es. 2.0) se il segnale è debole,
+  # riduci (es. 0.5) se le casse saturano l'analisi.
+  input_gain: 1.0
   frequency_ranges:
     bass:
     - 20

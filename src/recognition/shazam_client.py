@@ -55,16 +55,20 @@ class ShazamClient:
             if result and 'track' in result:
                 track = result['track']
                 
+                bpm = self._extract_bpm(track)
                 song_info = {
                     'title': track.get('title', 'Unknown'),
                     'artist': track.get('subtitle', 'Unknown Artist'),
                     'genre': self._extract_genre(track),
+                    'bpm': bpm,
                     'shazam_url': track.get('url', ''),
                     'cover_art': track.get('images', {}).get('coverart', ''),
                 }
-                
+
                 print(f"   ✅ Found: {song_info['artist']} - {song_info['title']}")
                 print(f"   🎸 Genre: {song_info['genre']}")
+                if bpm:
+                    print(f"   🥁 BPM: {bpm}")
                 
                 return song_info
             else:
@@ -88,6 +92,21 @@ class ShazamClient:
             wav_file.setframerate(sample_rate)
             wav_file.writeframes(audio_data.tobytes())
     
+    def _extract_bpm(self, track):
+        """Extract BPM from Shazam track metadata"""
+        try:
+            if 'sections' in track:
+                for section in track['sections']:
+                    if section.get('type') == 'SONG':
+                        for item in section.get('metadata', []):
+                            if item.get('title') in ('BPM', 'Tempo'):
+                                val = item.get('text', '').strip()
+                                if val.isdigit():
+                                    return int(val)
+        except Exception:
+            pass
+        return None
+
     def _extract_genre(self, track):
         """Extract genre from track data"""
         try:

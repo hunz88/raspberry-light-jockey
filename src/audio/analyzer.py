@@ -23,6 +23,9 @@ class AudioAnalyzer:
         self.channels = config.get('channels', 1)
         self.input_device = config.get('input_device', None)
         
+        # Input gain (amplify or attenuate mic signal before analysis)
+        self.input_gain = config.get('input_gain', 1.0)
+
         # Beat detection
         self.beat_sensitivity = config.get('beat_sensitivity', 0.5)
         self.energy_history = deque(maxlen=43)  # ~1 second at 44100/1024
@@ -60,6 +63,7 @@ class AudioAnalyzer:
         print(f"   Sample rate: {self.sample_rate} Hz")
         print(f"   Buffer size: {self.buffer_size}")
         print(f"   Device: {self.input_device if self.input_device else 'default'}")
+        print(f"   Input gain: {self.input_gain}x")
     
     def _try_open_stream(self, device_index, channels):
         """Try to open a stream with given device and channel count. Returns stream or None."""
@@ -209,8 +213,10 @@ class AudioAnalyzer:
     
     def _analyze_audio(self, audio_data):
         """Analyze audio buffer"""
-        # Normalize
+        # Normalize and apply input gain
         audio_data = audio_data.astype(np.float32) / 32768.0
+        if self.input_gain != 1.0:
+            audio_data = np.clip(audio_data * self.input_gain, -1.0, 1.0)
         
         # FFT
         fft = np.fft.rfft(audio_data)

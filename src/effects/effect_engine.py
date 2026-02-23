@@ -35,6 +35,7 @@ class EffectEngine:
         # Song recognition
         self.shazam_client = None
         self.ai_suggester = None
+        self.spotify_analyzer = None
         self.current_song_name = None
         self.suggested_effect_idx = None
 
@@ -49,6 +50,12 @@ class EffectEngine:
         # Song recipe - maps sections to effect indices for current song
         self.song_recipe = None
         self.prev_section = None
+
+        # Spotify section tracking
+        self.spotify_sections = None       # sezioni etichettate da Spotify
+        self._last_spotify_section = None  # ultima sezione Spotify applicata
+        self.song_offset_at_shazam = 0.0   # offset (s) nel brano al momento del riconoscimento
+        self.shazam_wall_time = 0.0        # wall-clock quando Shazam ha riconosciuto
 
         # Song personality - controls HOW effects behave (speed, punch, flash)
         self.song_personality = {'speed': 1.0, 'beat_flash': 0.0}
@@ -264,6 +271,24 @@ class EffectEngine:
                             print(f"📤 {old_name}")
                             print(f"{'🎭'*30}\n")
 
+                # SPOTIFY SECTION TRACKING (posizione precisa nel brano)
+                if self.spotify_sections and self.shazam_wall_time > 0:
+                    current_pos = self.song_offset_at_shazam + (current_time - self.shazam_wall_time)
+                    spotify_type = self._get_spotify_section_type(current_pos)
+                    if spotify_type and spotify_type != self._last_spotify_section:
+                        self._last_spotify_section = spotify_type
+                        if self.song_recipe and spotify_type in self.song_recipe:
+                            new_idx = self.song_recipe[spotify_type]
+                            if new_idx != self.current_effect:
+                                old_name = self.effect_names[self.current_effect]
+                                self.current_effect = new_idx
+                                self.last_effect_change = current_time
+                                new_name = self.effect_names[self.current_effect]
+                                print(f"\n{'🎵'*30}")
+                                print(f"🎵 SPOTIFY: {spotify_type.upper()} @ {current_pos:.0f}s → {new_name}")
+                                print(f"📤 {old_name}")
+                                print(f"{'🎵'*30}\n")
+
                 # Shazam check
                 if current_time - last_song_check > 30:
                     last_song_check = current_time
@@ -350,6 +375,19 @@ class EffectEngine:
                 print(f"\n❌ Error: {e}")
                 await asyncio.sleep(0.1)
     
+    def _get_spotify_section_type(self, position_seconds):
+        """Ritorna il tipo di sezione Spotify alla posizione indicata (in secondi)."""
+        if not self.spotify_sections:
+            return None
+        for section in self.spotify_sections:
+            end = section['start'] + section['duration']
+            if section['start'] <= position_seconds < end:
+                return section['type']
+        # Oltre la fine → usa l'ultima sezione
+        if position_seconds >= self.spotify_sections[-1]['start']:
+            return self.spotify_sections[-1]['type']
+        return None
+
     async def _check_song_and_suggest(self):
         try:
             now = time.time()
@@ -377,11 +415,24 @@ class EffectEngine:
                     artist = song_info.get('artist', 'Unknown')
                     genre = song_info.get('genre', 'Unknown')
                     bpm = song_info.get('bpm')
+                    offset = song_info.get('offset', 0.0)
 
                     if bpm:
                         self._shazam_bpm = bpm
 
-                    self.current_song_name = f"{artist} - {title}"
+                    new_song_name = f"{artist} - {title}"
+                    is_new_song = (new_song_name != self.current_song_name)
+
+                    # Aggiorna posizione nella canzone (anche per stessa canzone)
+                    self.song_offset_at_shazam = offset
+                    self.shazam_wall_time = now
+
+                    if is_new_song:
+                        # Nuova canzone: resetta dati Spotify vecchi
+                        self.spotify_sections = None
+                        self._last_spotify_section = None
+
+                    self.current_song_name = new_song_name
                     self.music_intelligence.set_song_metadata(genre)
                     self.color_system.set_genre(genre)
 
@@ -393,6 +444,7 @@ class EffectEngine:
                     print(f"   🎸 {genre}")
                     if bpm:
                         print(f"   🥁 BPM ufficiale: {bpm}")
+                    print(f"   📍 Offset: {offset:.1f}s nel brano")
                     print(f"   🎭 Recipe: drop={self.effect_names[self.song_recipe['drop']]} | chorus={self.effect_names[self.song_recipe['chorus']]} | break={self.effect_names[self.song_recipe['break']]}")
                     print(f"   🕹️  Personality: speed={self.song_personality['speed']}x | beat_flash={self.song_personality['beat_flash']}")
 
@@ -405,6 +457,16 @@ class EffectEngine:
                     if lyrics_snippet:
                         song_info['lyrics_snippet'] = lyrics_snippet
                         print(f"   📝 Lyrics: {lyrics_snippet[:60]}...")
+
+                    # Spotify section map (solo per nuova canzone)
+                    if is_new_song and self.spotify_analyzer:
+                        spotify_sections = await loop.run_in_executor(
+                            None,
+                            lambda: self.spotify_analyzer.get_song_sections(artist, title)
+                        )
+                        if spotify_sections:
+                            self.spotify_sections = spotify_sections
+                            print(f"   🗺️  Spotify: mappa sezioni caricata ({len(spotify_sections)} sezioni)")
 
                     # Ask AI for palette (uses lyrics if available)
                     if self.ai_suggester:

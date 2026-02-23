@@ -127,6 +127,19 @@ class LightJockey:
         if self.ai_suggester:
             self.effect_engine.ai_suggester = self.ai_suggester
             print(f"   ✅ AI provider connected!")
+
+        # Connect Spotify analyzer
+        spotify_cfg = self.config.get('spotify', {})
+        if spotify_cfg.get('enabled', False):
+            try:
+                from recognition.spotify_analyzer import SpotifyAnalyzer
+                self.effect_engine.spotify_analyzer = SpotifyAnalyzer(
+                    spotify_cfg['client_id'],
+                    spotify_cfg['client_secret']
+                )
+                print(f"   ✅ Spotify section analyzer connected!")
+            except Exception as e:
+                print(f"   ⚠️  Spotify non disponibile: {e}")
         
         # Start audio
         self.audio_analyzer.start()

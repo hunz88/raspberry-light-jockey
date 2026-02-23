@@ -54,13 +54,20 @@ class ShazamClient:
             # Parse result
             if result and 'track' in result:
                 track = result['track']
-                
+
+                # Offset = posizione in secondi nella canzone dove il sample corrisponde
+                offset = 0.0
+                matches = result.get('matches', [])
+                if matches:
+                    offset = float(matches[0].get('offset', 0.0))
+
                 bpm = self._extract_bpm(track)
                 song_info = {
                     'title': track.get('title', 'Unknown'),
                     'artist': track.get('subtitle', 'Unknown Artist'),
                     'genre': self._extract_genre(track),
                     'bpm': bpm,
+                    'offset': offset,
                     'shazam_url': track.get('url', ''),
                     'cover_art': track.get('images', {}).get('coverart', ''),
                 }

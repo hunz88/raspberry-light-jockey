@@ -123,6 +123,10 @@ effects:
     # - salon        (= salon_left + salon_right + salon_back)
     # - bar_floor    (= bar_floor_left + bar_floor_right)
     # - bar          (= bar_top + bar_floor_left + bar_floor_right)
+spotify:
+  enabled: true
+  client_id: 0ad672f8be744b6096aa73ae9ed48cad
+  client_secret: c76b9b9ee8054f34ba4dd197cad0dc1f
 recognition:
   enabled: true
   sample_duration: 5

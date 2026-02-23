@@ -287,13 +287,16 @@ class EffectEngine:
                         print(f"🎼 {self.current_song_name}")
                     print(f"{'='*60}\n")
                 
-                # Silence
+                # Silence: continua ad animare l'effetto corrente con valori minimi
+                # così le luci non si bloccano tra una canzone e l'altra
                 if audio_data.get('is_silent', False):
-                    await self.set_zone('salon', 30, 30, 60, 40)
-                    await self.set_zone('dj', 40, 40, 70, 50)
-                    await self.set_zone('bar', 60, 60, 90, 60)
-                    await self.set_zone('strips', 100, 50, 0, 80)
-                    await asyncio.sleep(0.2)
+                    silent_audio = dict(audio_data)
+                    silent_audio.update({'energy': 0.18, 'bass': 0.12, 'beat': False})
+                    self.wave_position += 1
+                    self.chase_position += 1
+                    self.rainbow_offset += 1
+                    await self.effects[self.current_effect](silent_audio)
+                    await asyncio.sleep(0.12)
                     continue
                 
                 # INTELLIGENT CHANGE

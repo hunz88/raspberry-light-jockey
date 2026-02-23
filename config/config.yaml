@@ -12,7 +12,7 @@ ai:
 audio:
   input_device: 0
   sample_rate: 48000
-  buffer_size: 2048
+  buffer_size: 4096
   channels: 1
   beat_sensitivity: 0.5
   # Guadagno microfono: 1.0 = normale. Aumenta (es. 2.0) se il segnale è debole,

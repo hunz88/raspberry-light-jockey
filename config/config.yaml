@@ -36,20 +36,20 @@ lights:
     - '192.168.0.22'   # 1  - Seconda sinistra DJ
     - '192.168.0.118'  # 2  - TV dietro DJ (CENTRALE)
     - '192.168.0.84'   # 3  - Prima destra DJ
-    - '192.168.0.234'  # 4  - Seconda destra DJ
-    
+    - '192.168.0.69'   # 4  - Seconda destra DJ  (IP cambiato da 234)
+
     # ============================================
     # ZONA 2: CORRIDOIO (1 luce)
     # ============================================
-    - '192.168.0.108'  # 5  - Davanti porta (transizione)
-    
+    - '192.168.0.106'  # 5  - Davanti porta (transizione)  (IP cambiato da 108)
+
     # ============================================
     # ZONA 3: SALONE PRINCIPALE (9 luci)
     # Organizzate per creare effetti coordinati
     # ============================================
-    - '192.168.0.70'   # 6  - Prima sinistra salone
+    - '192.168.0.122'  # 6  - Prima sinistra salone  (IP cambiato da 70)
     - '192.168.0.211'  # 7  - Prima sinistra salone (2)
-    - '192.168.0.123'  # 8  - Penultima sinistra
+    - '192.168.0.233'  # 8  - Penultima sinistra  (IP cambiato da 123)
     - '192.168.0.173'  # 9  - Infondo sinistra
     - '192.168.0.190'  # 10 - Prima destra salone
     - '192.168.0.98'   # 11 - Prima destra salone (2)
@@ -84,7 +84,7 @@ lights:
     # Retrobancone per illuminare bottiglie
     # ============================================
     - '192.168.0.107'  # 27 - Strip LED bottigliera 1
-    - '192.168.0.100'  # 28 - Strip LED bottigliera 2
+    - '192.168.0.113'  # 28 - Strip LED bottigliera 2  (IP cambiato da 100, confermato BLU)
     - '192.168.0.104'  # 29 - Strip LED soffitto
     
     # ============================================
